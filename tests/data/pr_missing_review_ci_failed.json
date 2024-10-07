@@ -1,0 +1,44 @@
+[
+  {
+    "labels": [
+      {
+        "id": "MDU6TGFiZWwxNzM3MjEwMTc=",
+        "name": "enhancement",
+        "description": "",
+        "color": "84b6eb"
+      },
+      {
+        "id": "MDU6TGFiZWwzNTI2MjY1NDA=",
+        "name": "P1",
+        "description": "",
+        "color": "d93f0b"
+      },
+      {
+        "id": "LA_kwDOAc6Y3c7cwogD",
+        "name": "ready for review",
+        "description": "The pull request is ready to review",
+        "color": "0052CC"
+      },
+      {
+        "id": "LA_kwDOAc6Y3c8AAAABpEG3Zg",
+        "name": "easyfix",
+        "description": "",
+        "color": "0E8A16"
+      },
+      {
+        "id": "LA_kwDOAc6Y3c8AAAABrYkcpw",
+        "name": "pr/missing-review",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOAc6Y3c8AAAABrdCuRQ",
+        "name": "pr/failing-ci",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 314,
+    "title": "Support s2i-core building and testing on Fedora 41"
+  }
+]

@@ -18,7 +18,7 @@ jobs:
         run: |
           echo "::set-output name=SHA::$(git rev-parse HEAD)"
 
-      - name: Install needed dependences for sanity checks
+      - name: Install needed dependencies for sanity checks
         id: sched_test
         run: |
           sudo apt-get update && sudo apt-get -y install curl jq make git shellcheck python3 python3-pip

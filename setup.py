@@ -36,7 +36,7 @@ long_description = (
 
 def get_requirements():
     """Parse all packages mentioned in the 'requirements.txt' file."""
-    with open(Path(this_directory) / "requirements.txt") as file_stream:
+    with open("requirements.txt") as file_stream:
         return file_stream.read().splitlines()
 
 
