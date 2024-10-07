@@ -1,0 +1,12 @@
+[
+  {
+    "labels": [],
+    "number": 180,
+    "title": "Use 3.3-ubi9 as default. Add initialConter to rail-postgresql.json"
+  },
+  {
+    "labels": [],
+    "number": 178,
+    "title": "Fix the openshift templates"
+  }
+]
