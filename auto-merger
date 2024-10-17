@@ -25,9 +25,44 @@
 #
 # Authors: Petr Hracek <phracek@redhat.com>
 
+import logging
+import sys
+
+import click
+
 from auto_merger.merger import AutoMerger
+from auto_merger.utils import setup_logger
+
+logger = logging.getLogger(__name__)
+
+
+@click.command()
+@click.option("-d", "--debug", is_flag=True, help="Enable debug logs")
+@click.option("--print-results", is_flag=True, help="Prints readable summary")
+@click.option("--github-labels", required=True, multiple=True,
+              help="Specify Git Hub labels to meet criteria")
+@click.option("--blocking-labels", multiple=True,
+              help="Specify Git Hub labels that blocks PR to merge")
+@click.option("--send-email", multiple=True, help="Specify email addresses to which the mail will be sent.")
+@click.option("--approvals",
+              default=2, type=int,
+              help="Specify number of approvals to automatically merge PR. Default 2")
+def auto_merger(debug, print_results, github_labels, blocking_labels, approvals, send_email):
+    am = AutoMerger(github_labels, blocking_labels,  approvals)
+    if debug:
+        setup_logger("auto-merger", level=logging.DEBUG)
+    else:
+        setup_logger("auto-merger", level=logging.INFO)
+    ret_value = am.check_all_containers()
+    if ret_value != 0:
+        sys.exit(2)
+    if print_results:
+        am.print_blocked_pull_request()
+        am.print_approval_pull_request()
+    if not am.send_results(send_email):
+        sys.exit(1)
+    sys.exit(ret_value)
 
 
 if __name__ == "__main__":
-    auto_merger = AutoMerger()
-    auto_merger.check_all_containers()
+    auto_merger()

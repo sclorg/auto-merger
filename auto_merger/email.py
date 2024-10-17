@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # MIT License
 #
 # Copyright (c) 2024 Red Hat, Inc.
@@ -22,19 +20,33 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-UPSTREAM_REPOS = [
-    "httpd-container",
-    "s2i-base-container",
-    "s2i-perl-container",
-    "s2i-nodejs-container",
-    "s2i-php-container",
-    "s2i-ruby-container",
-    "s2i-python-container",
-    "nginx-container",
-    "mysql-container",
-    "postgresql-container",
-    "mariadb-container",
-    "redis-container",
-    "valkey-container",
-    "varnish-container",
-]
+import smtplib
+
+
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import List
+
+
+class EmailSender:
+
+    def __init__(self, recipient_email: List[str]):
+        self.recipient_email = recipient_email
+        self.mime_msg = MIMEMultipart()
+
+    def send_email(self, subject_msg, body: List[str]):
+        send_from = "phracek@redhat.com"
+        send_to = self.recipient_email
+        print(body)
+        msg = "<br>".join(body)
+        print(msg)
+        self.mime_msg["From"] = send_from
+        self.mime_msg["To"] = ", ".join(send_to)
+        self.mime_msg["Subject"] = subject_msg
+        self.mime_msg.attach(MIMEText(msg, "html"))
+        smtp = smtplib.SMTP("127.0.0.1")
+        smtp.sendmail(send_from, send_to, self.mime_msg.as_string())
+        smtp.close()
+        print("Sending email finished")
+
