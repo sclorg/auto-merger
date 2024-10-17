@@ -275,9 +275,10 @@ class AutoMerger:
         print('\n'.join(self.approval_body))
 
     def send_results(self, recipients):
+        self.logger.debug(f"Recepients are: {recipients}")
         if not recipients:
             return 1
-        sender_class = EmailSender(recipient_email=recipients)
+        sender_class = EmailSender(recipient_email=list(recipients))
         subject_msg = "Pull request statuses for organization https://gibhub.com/sclorg"
         sender_class.send_email(subject_msg, self.blocked_body + self.approval_body)
 
