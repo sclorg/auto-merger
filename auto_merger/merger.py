@@ -240,19 +240,22 @@ class AutoMerger:
         # Do not print anything in case we do not have PR.
         if not [x for x in self.blocked_pr if self.blocked_pr[x]]:
             return 0
-        self.blocked_body.append(f"Pull requests that are blocked by labels [{', '.join(self.blocking_labels)}]")
+        self.blocked_body.append(
+            f"Pull requests that are blocked by labels <b>[{', '.join(self.blocking_labels)}]</b><br><br>"
+        )
+
         for container, pull_requests in self.blocked_pr.items():
             if not pull_requests:
                 continue
-            self.blocked_body.append(f"{container}:")
+            self.blocked_body.append(f"<b>{container}<b>:")
+            self.blocked_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Missing labels</th></tr>")
             for pr in pull_requests:
                 blocked_labels = self.get_blocked_labels(pr["pr_dict"])
                 self.blocked_body.append(
-                    f"https://github.com/sclorg/{container}/pull/{pr['number']} - "
-                    f"[{pr['pr_dict']['title']}] -> {' '.join(blocked_labels)}"
+                    f"<tr><td>https://github.com/sclorg/{container}/pull/{pr['number']}</td>"
+                    f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{' '.join(blocked_labels)}</p></td></tr>"
                 )
-            self.blocked_body.extend([""])
-        self.blocked_body.extend(["", ""])
+            self.blocked_body.append("</table><br><br>")
         print('\n'.join(self.blocked_body))
 
     def print_approval_pull_request(self):
@@ -260,18 +263,19 @@ class AutoMerger:
         if not [x for x in self.pr_to_merge if self.pr_to_merge[x]]:
             return 0
         self.approval_body.append(f"Pull requests that can be merged or missing {self.approvals} approvals")
+        self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
         for container, pr in self.pr_to_merge.items():
             if not pr:
                 continue
             if int(pr["approvals"]) >= self.approvals:
-                result_pr = f" -> CAN BE MERGED"
+                result_pr = f"CAN BE MERGED"
             else:
-                result_pr = f" -> Missing {self.approvals-int(pr['approvals'])} APPROVAL"
+                result_pr = f"Missing {self.approvals-int(pr['approvals'])} APPROVAL"
             self.approval_body.append(
-                f"https://github.com/sclorg/{container}/pull/{pr['number']} - "
-                f"[{pr['pr_dict']['title']}]{result_pr}"
+                f"<tr><td>https://github.com/sclorg/{container}/pull/{pr['number']}</td>"
+                f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
             )
-        self.approval_body.extend(["", ""])
+        self.approval_body.append("</table><br>")
         print('\n'.join(self.approval_body))
 
     def send_results(self, recipients):

@@ -39,7 +39,9 @@ class EmailSender:
         send_from = "phracek@redhat.com"
         send_to = self.recipient_email
         print(body)
-        msg = "<br>".join(body)
+        whole_body = "".join(body)
+        msg = ("<html><head><style>table, th, td {border: 1px solid black;}</style></head>"
+               f"<body>{whole_body}</body></html>")
         print(msg)
         self.mime_msg["From"] = send_from
         self.mime_msg["To"] = ", ".join(send_to)
