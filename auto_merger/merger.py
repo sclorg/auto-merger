@@ -38,7 +38,6 @@ from auto_merger.email import EmailSender
 
 
 class AutoMerger:
-    repo_data: List = []
     container_name: str = ""
     container_dir: Path
     current_dir = os.getcwd()
@@ -55,6 +54,7 @@ class AutoMerger:
         self.pr_to_merge = {}
         self.blocked_body = []
         self.approval_body = []
+        self.repo_data: List = []
 
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
@@ -71,9 +71,9 @@ class AutoMerger:
 
     def get_gh_pr_list(self):
         cmd = ["gh pr list -s open --json number,title,labels,reviews,isDraft"]
-        repo_data = AutoMerger.get_gh_json_output(cmd=cmd)
-        for pr in repo_data:
-            if self.is_draft(pr):
+        repo_data_output = AutoMerger.get_gh_json_output(cmd=cmd)
+        for pr in repo_data_output:
+            if AutoMerger.is_draft(pr):
                 continue
             if self.is_changes_requested(pr):
                 continue
@@ -159,19 +159,23 @@ class AutoMerger:
                 return True
         return False
 
-    def is_draft(self, pr):
-        if pr['isDraft']:
-            return True
+    @staticmethod
+    def is_draft(pull_request):
+        if "isDraft" in pull_request:
+            if pull_request["isDraft"] in ["True", "true"]:
+                return True
         return False
 
     def check_pr_to_merge(self) -> bool:
         if len(self.repo_data) == 0:
             return False
         for pr in self.repo_data:
-            if self.is_draft(pr):
+            if AutoMerger.is_draft(pr):
                 continue
             self.logger.debug(f"PR status: {pr}")
             if not self.check_labels_to_merge(pr):
+                continue
+            if "reviews" not in pr:
                 continue
             approval_count = self.check_pr_approvals(pr["reviews"])
             self.pr_to_merge[self.container_name] = {
