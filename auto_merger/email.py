@@ -29,26 +29,34 @@ from email.mime.text import MIMEText
 from typing import List
 
 
+DEFAULT_MAILS = ["phracek@redhat.com", "sclorg@redhat.com"]
+
+
 class EmailSender:
 
-    def __init__(self, recipient_email: List[str]):
+    def __init__(self, recipient_email: List[str] = None):
         self.recipient_email = recipient_email
         self.mime_msg = MIMEMultipart()
+        self.send_from = ""
+        self.send_to = ""
 
-    def send_email(self, subject_msg, body: List[str]):
-        send_from = "phracek@redhat.com"
-        send_to = self.recipient_email
-        print(body)
+    def create_email_msg(self, subject_msg: str):
+        self.send_from = "phracek@redhat.com"
+        self.send_to = DEFAULT_MAILS
+        if self.recipient_email is not None:
+            self.send_to.extend(self.recipient_email)
+        self.mime_msg["From"] = self.send_from
+        self.mime_msg["To"] = ", ".join(self.send_to)
+        self.mime_msg["Subject"] = subject_msg
+
+    def send_email(self, subject_msg, body: List[str] = None):
         whole_body = "".join(body)
         msg = ("<html><head><style>table, th, td {border: 1px solid black;}</style></head>"
                f"<body>{whole_body}</body></html>")
-        print(msg)
-        self.mime_msg["From"] = send_from
-        self.mime_msg["To"] = ", ".join(send_to)
-        self.mime_msg["Subject"] = subject_msg
+        self.create_email_msg(subject_msg)
         self.mime_msg.attach(MIMEText(msg, "html"))
         smtp = smtplib.SMTP("127.0.0.1")
-        smtp.sendmail(send_from, send_to, self.mime_msg.as_string())
+        smtp.sendmail(self.send_from, self.send_to, self.mime_msg.as_string())
         smtp.close()
         print("Sending email finished")
 
