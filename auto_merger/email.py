@@ -29,20 +29,23 @@ from email.mime.text import MIMEText
 from typing import List
 
 
+DEFAULT_MAILS = ["phracek@redhat.com", "sclorg@redhat.com"]
+
+
 class EmailSender:
 
-    def __init__(self, recipient_email: List[str]):
+    def __init__(self, recipient_email: List[str] = None):
         self.recipient_email = recipient_email
         self.mime_msg = MIMEMultipart()
 
-    def send_email(self, subject_msg, body: List[str]):
+    def send_email(self, subject_msg, body: List[str] = None):
         send_from = "phracek@redhat.com"
-        send_to = self.recipient_email
-        print(body)
+        send_to = DEFAULT_MAILS
+        if self.recipient_email is not None:
+            send_to.extend(self.recipient_email)
         whole_body = "".join(body)
         msg = ("<html><head><style>table, th, td {border: 1px solid black;}</style></head>"
                f"<body>{whole_body}</body></html>")
-        print(msg)
         self.mime_msg["From"] = send_from
         self.mime_msg["To"] = ", ".join(send_to)
         self.mime_msg["Subject"] = subject_msg
