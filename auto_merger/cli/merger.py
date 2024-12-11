@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 @click.option("--approvals",
               default=2, type=int,
               help="Specify number of approvals to automatically merge PR. Default 2")
-@click.option("--pr-lifetime", int=1, help="Specify a smallest time for which PR should opened")
+@click.option("--pr-lifetime", default=1, type=int, help="Specify a smallest time for which PR should opened")
 @pass_global_config
 def merger(ctx, print_results, merger_labels, approvals, pr_lifetime, send_email):
     logger.debug(ctx.debug)

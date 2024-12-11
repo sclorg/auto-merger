@@ -54,7 +54,7 @@ def merger(print_results, merger_labels, approvals, pr_lifetime, send_email) -> 
     if ret_value != 0:
         return ret_value
     if print_results:
-        auto_merger.print_approval_pull_request()
+        auto_merger.print_pull_request_to_merge()
     if not auto_merger.send_results(send_email):
         return 1
     return ret_value
