@@ -37,16 +37,18 @@ from auto_merger.utils import setup_logger
 from auto_merger.email import EmailSender
 
 
-class AutoMerger:
+class PRStatusChecker:
     container_name: str = ""
     container_dir: Path
     current_dir = os.getcwd()
 
-    def __init__(self, github_labels, approvals: int = 2, pr_lifetime: int = 1):
+    def __init__(self, github_labels, blocking_labels, approvals: int = 2):
         self.logger = setup_logger("AutoMerger")
         self.github_labels = list(github_labels)
+        self.blocking_labels = list(blocking_labels)
         self.approvals = approvals
         self.logger.debug(f"GitHub Labels: {self.github_labels}")
+        self.logger.debug(f"GitHub Blocking Labels: {self.blocking_labels}")
         self.logger.debug(f"Approvals Labels: {self.approvals}")
         self.blocked_pr = {}
         self.pr_to_merge = {}
@@ -56,7 +58,7 @@ class AutoMerger:
 
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
-        repo_name = AutoMerger.get_gh_json_output(cmd=cmd)
+        repo_name = PRStatusChecker.get_gh_json_output(cmd=cmd)
         self.logger.debug(repo_name)
         if repo_name["name"] == self.container_name:
             return True
@@ -69,9 +71,9 @@ class AutoMerger:
 
     def get_gh_pr_list(self):
         cmd = ["gh pr list -s open --json number,title,labels,reviews,isDraft"]
-        repo_data_output = AutoMerger.get_gh_json_output(cmd=cmd)
+        repo_data_output = PRStatusChecker.get_gh_json_output(cmd=cmd)
         for pr in repo_data_output:
-            if AutoMerger.is_draft(pr):
+            if PRStatusChecker.is_draft(pr):
                 continue
             if self.is_changes_requested(pr):
                 continue
@@ -168,7 +170,7 @@ class AutoMerger:
         if len(self.repo_data) == 0:
             return False
         for pr in self.repo_data:
-            if AutoMerger.is_draft(pr):
+            if PRStatusChecker.is_draft(pr):
                 continue
             self.logger.debug(f"PR status: {pr}")
             if not self.check_labels_to_merge(pr):
@@ -290,5 +292,5 @@ class AutoMerger:
 
 
 def run():
-    auto_merger = AutoMerger()
+    auto_merger = PRStatusChecker()
     auto_merger.check_all_containers()
