@@ -37,24 +37,28 @@ from auto_merger.utils import setup_logger
 from auto_merger.email import EmailSender
 
 
-class AutoMerger:
+class PRStatusChecker:
     container_name: str = ""
     container_dir: Path
     current_dir = os.getcwd()
 
-    def __init__(self, github_labels, approvals: int = 2, pr_lifetime: int = 1):
+    def __init__(self, github_labels, blocking_labels, approvals: int = 2):
         self.logger = setup_logger("AutoMerger")
-        self.approval_labels = list(github_labels)
+        self.github_labels = list(github_labels)
+        self.blocking_labels = list(blocking_labels)
         self.approvals = approvals
-        self.logger.debug(f"GitHub Labels: {self.approval_labels}")
+        self.logger.debug(f"GitHub Labels: {self.github_labels}")
+        self.logger.debug(f"GitHub Blocking Labels: {self.blocking_labels}")
         self.logger.debug(f"Approvals Labels: {self.approvals}")
+        self.blocked_pr = {}
         self.pr_to_merge = {}
+        self.blocked_body = []
         self.approval_body = []
         self.repo_data: List = []
 
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
-        repo_name = AutoMerger.get_gh_json_output(cmd=cmd)
+        repo_name = PRStatusChecker.get_gh_json_output(cmd=cmd)
         self.logger.debug(repo_name)
         if repo_name["name"] == self.container_name:
             return True
@@ -67,9 +71,9 @@ class AutoMerger:
 
     def get_gh_pr_list(self):
         cmd = ["gh pr list -s open --json number,title,labels,reviews,isDraft"]
-        repo_data_output = AutoMerger.get_gh_json_output(cmd=cmd)
+        repo_data_output = PRStatusChecker.get_gh_json_output(cmd=cmd)
         for pr in repo_data_output:
-            if AutoMerger.is_draft(pr):
+            if PRStatusChecker.is_draft(pr):
                 continue
             if self.is_changes_requested(pr):
                 continue
@@ -89,6 +93,22 @@ class AutoMerger:
             return False
         return True
 
+    def add_blocked_pr(self, pr: {}):
+        present = False
+        for stored_pr in self.blocked_pr[self.container_name]:
+            if int(stored_pr["number"]) == int(pr["number"]):
+                present = True
+        if present:
+            return
+        self.blocked_pr[self.container_name].append({
+            "number": pr["number"],
+            "pr_dict": {
+                "title": pr["title"],
+                "labels": pr["labels"]
+            }
+        })
+        self.logger.debug(f"PR {pr['number']} added to blocked")
+
     def add_approved_pr(self, pr: {}):
         self.pr_to_merge[self.container_name].append({
             "number": pr["number"],
@@ -99,11 +119,22 @@ class AutoMerger:
         })
         self.logger.debug(f"PR {pr['number']} added to approved")
 
+    def check_blocked_labels(self):
+        for pr in self.repo_data:
+            self.logger.debug(f"Check blocked: {pr}")
+            if "labels" not in pr:
+                continue
+            for label in pr["labels"]:
+                if label["name"] not in self.blocking_labels:
+                    continue
+                self.logger.debug(f"Add '{pr['number']}' to blocked PRs.")
+                self.add_blocked_pr(pr)
+
     def check_labels_to_merge(self, pr):
         if "labels" not in pr:
             return True
         for label in pr["labels"]:
-            if label["name"] in self.approval_labels:
+            if label["name"] in self.blocking_labels:
                 return False
         self.logger.debug(f"Add '{pr['number']}' to approved PRs.")
         return True
@@ -139,7 +170,7 @@ class AutoMerger:
         if len(self.repo_data) == 0:
             return False
         for pr in self.repo_data:
-            if AutoMerger.is_draft(pr):
+            if PRStatusChecker.is_draft(pr):
                 continue
             self.logger.debug(f"PR status: {pr}")
             if not self.check_labels_to_merge(pr):
@@ -184,10 +215,17 @@ class AutoMerger:
                 self.logger.error(f"This is not correct repo {self.container_name}.")
                 self.clean_dirs()
                 continue
+            if self.container_name not in self.blocked_pr:
+                self.blocked_pr[self.container_name] = []
             if self.container_name not in self.pr_to_merge:
                 self.pr_to_merge[self.container_name] = []
             try:
                 self.get_gh_pr_list()
+                self.check_blocked_labels()
+                if len(self.blocked_pr[self.container_name]) != 0:
+                    self.logger.info(
+                        f"This pull request can not be merged {self.pr_to_merge}"
+                    )
                 self.check_pr_to_merge()
             except subprocess.CalledProcessError:
                 self.clean_dirs()
@@ -196,31 +234,52 @@ class AutoMerger:
             self.clean_dirs()
         return 0
 
+    def get_blocked_labels(self, pr_dict) -> List [str]:
+        labels = []
+        for lbl in pr_dict["labels"]:
+            labels.append(lbl["name"])
+        return labels
 
-    def print_pull_request_to_merge(self):
+    def print_blocked_pull_request(self):
+        # Do not print anything in case we do not have PR.
+        if not [x for x in self.blocked_pr if self.blocked_pr[x]]:
+            return 0
+        self.blocked_body.append(
+            f"Pull requests that are blocked by labels <b>[{', '.join(self.blocking_labels)}]</b><br><br>"
+        )
+
+        for container, pull_requests in self.blocked_pr.items():
+            if not pull_requests:
+                continue
+            self.blocked_body.append(f"<b>{container}<b>:")
+            self.blocked_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Missing labels</th></tr>")
+            for pr in pull_requests:
+                blocked_labels = self.get_blocked_labels(pr["pr_dict"])
+                self.blocked_body.append(
+                    f"<tr><td>https://github.com/sclorg/{container}/pull/{pr['number']}</td>"
+                    f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{' '.join(blocked_labels)}</p></td></tr>"
+                )
+            self.blocked_body.append("</table><br><br>")
+        print('\n'.join(self.blocked_body))
+
+    def print_approval_pull_request(self):
         # Do not print anything in case we do not have PR.
         if not [x for x in self.pr_to_merge if self.pr_to_merge[x]]:
             return 0
-        to_approval: bool = False
-        pr_body: List = []
+        self.approval_body.append(f"Pull requests that can be merged or missing {self.approvals} approvals")
+        self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
         for container, pr in self.pr_to_merge.items():
             if not pr:
                 continue
-            if int(pr["approvals"]) < self.approvals:
-                continue
-            to_approval = True
-            result_pr = f"CAN BE MERGED"
-            pr_body.append(
+            if int(pr["approvals"]) >= self.approvals:
+                result_pr = f"CAN BE MERGED"
+            else:
+                result_pr = f"Missing {self.approvals-int(pr['approvals'])} APPROVAL"
+            self.approval_body.append(
                 f"<tr><td>https://github.com/sclorg/{container}/pull/{pr['number']}</td>"
                 f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
             )
-        if to_approval:
-            self.approval_body.append(f"Pull requests that can be merged.")
-            self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
-            self.approval_body.extend(pr_body)
-            self.approval_body.append("</table><br>")
-        else:
-            self.approval_body.append("There are not pull requests to be merged.")
+        self.approval_body.append("</table><br>")
         print('\n'.join(self.approval_body))
 
     def send_results(self, recipients):
@@ -229,9 +288,9 @@ class AutoMerger:
             return 1
         sender_class = EmailSender(recipient_email=list(recipients))
         subject_msg = "Pull request statuses for organization https://gibhub.com/sclorg"
-        sender_class.send_email(subject_msg, self.approval_body)
+        sender_class.send_email(subject_msg, self.blocked_body + self.approval_body)
 
 
 def run():
-    auto_merger = AutoMerger()
+    auto_merger = PRStatusChecker()
     auto_merger.check_all_containers()
