@@ -24,6 +24,10 @@ import subprocess
 import logging
 import tempfile
 import sys
+import os
+
+from pathlib import Path
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -99,3 +103,19 @@ def setup_logger(logger_id, level=logging.DEBUG):
     stderr.setFormatter(formatter)
     logger.addHandler(stderr)
     return logger
+
+
+@contextmanager
+def cwd(path):
+    """
+    Switch to Path directory and once action is done
+    returns back
+    :param path:
+    :return:
+    """
+    prev_cwd = Path.cwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(prev_cwd)

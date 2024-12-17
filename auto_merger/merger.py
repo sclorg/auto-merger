@@ -28,12 +28,15 @@ import subprocess
 import os
 import shutil
 
+from datetime import datetime, timedelta
 from typing import List
 from pathlib import Path
 
+import pytest
+
 from auto_merger import utils
 from auto_merger.constants import UPSTREAM_REPOS
-from auto_merger.utils import setup_logger
+from auto_merger.utils import setup_logger, cwd
 from auto_merger.email import EmailSender
 
 
@@ -45,12 +48,15 @@ class AutoMerger:
     def __init__(self, github_labels, approvals: int = 2, pr_lifetime: int = 1):
         self.logger = setup_logger("AutoMerger")
         self.approval_labels = list(github_labels)
+        self.pr_lifetime = pr_lifetime
         self.approvals = approvals
         self.logger.debug(f"GitHub Labels: {self.approval_labels}")
         self.logger.debug(f"Approvals Labels: {self.approvals}")
+        self.logger.debug(f"PR lifetime Labels: {self.pr_lifetime}")
         self.pr_to_merge = {}
         self.approval_body = []
         self.repo_data: List = []
+        self.temp_dir = ""
 
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
@@ -66,7 +72,7 @@ class AutoMerger:
         return json.loads(gh_repo_list)
 
     def get_gh_pr_list(self):
-        cmd = ["gh pr list -s open --json number,title,labels,reviews,isDraft"]
+        cmd = ["gh pr list -s open --json number,title,labels,reviews,isDraft,createdAt"]
         repo_data_output = AutoMerger.get_gh_json_output(cmd=cmd)
         for pr in repo_data_output:
             if AutoMerger.is_draft(pr):
@@ -94,7 +100,8 @@ class AutoMerger:
             "number": pr["number"],
             "pr_dict": {
                 "title": pr["title"],
-                "labels": pr["labels"]
+                "labels": pr["labels"],
+                "createdAt": pr["createdAt"],
             }
         })
         self.logger.debug(f"PR {pr['number']} added to approved")
@@ -116,11 +123,12 @@ class AutoMerger:
         for review in reviews_to_check:
             if review["state"] == "APPROVED":
                 approval_cnt += 1
-        if approval_cnt < 2:
-            self.logger.debug(f"Approval count: {approval_cnt}")
+        if approval_cnt < self.approvals:
+            self.logger.debug(f"Not enough approvals: {approval_cnt}. Should be at least {self.approvals}")
         return approval_cnt
 
-    def is_changes_requested(self, pr):
+    @staticmethod
+    def is_changes_requested(pr):
         if "labels" not in pr:
             return False
         for labels in pr["labels"]:
@@ -129,10 +137,26 @@ class AutoMerger:
         return False
 
     @staticmethod
+    def get_realtime():
+        from datetime import datetime
+        return datetime.now()
+
+    @staticmethod
     def is_draft(pull_request):
         if "isDraft" in pull_request:
             if pull_request["isDraft"] in ["True", "true"]:
                 return True
+        return False
+
+    def check_pr_lifetime(self, pr: dict) -> bool:
+        if self.pr_lifetime == 0:
+            return True
+        if "createdAt" not in pr:
+            return False
+        pr_life = pr["createdAt"]
+        date_created = datetime.strptime(pr_life, "%Y-%m-%dT%H:%M:%SZ") + timedelta(days=1)
+        if date_created < AutoMerger.get_realtime():
+            return True
         return False
 
     def check_pr_to_merge(self) -> bool:
@@ -147,31 +171,48 @@ class AutoMerger:
             if "reviews" not in pr:
                 continue
             approval_count = self.check_pr_approvals(pr["reviews"])
+            if not self.check_pr_lifetime(pr=pr):
+                continue
             self.pr_to_merge[self.container_name] = {
                 "number": pr["number"],
                 "approvals": approval_count,
                 "pr_dict": {
-                    "title": pr["title"]
+                    "title": pr["title"],
                 }
             }
 
     def clone_repo(self):
-        temp_dir = utils.temporary_dir()
+        self.temp_dir = utils.temporary_dir()
         utils.run_command(
-            f"gh repo clone https://github.com/sclorg/{self.container_name} {temp_dir}/{self.container_name}"
+            f"gh repo clone https://github.com/sclorg/{self.container_name} {self.temp_dir}/{self.container_name}"
         )
-        self.container_dir = Path(temp_dir) / f"{self.container_name}"
+        self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
         if self.container_dir.exists():
             os.chdir(self.container_dir)
 
     def merge_pull_requests(self):
-        for pr in self.pr_to_merge:
-            self.logger.debug(f"PR to merge {pr} in repo {self.container_name}.")
+        for container in UPSTREAM_REPOS:
+            self.container_name = container
+            self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
+            with cwd(self.container_dir) as _:
+                self.merge_pr()
+            self.clean_dirs()
+
 
     def clean_dirs(self):
         os.chdir(self.current_dir)
         if self.container_dir.exists():
             shutil.rmtree(self.container_dir)
+
+    def merge_pr(self):
+        for pr in self.pr_to_merge[self.container_name]:
+            self.logger.info(f"Let's try to merge {pr['number']}....")
+            try:
+                output = utils.run_command(f"gh pr merge {pr['number']}", return_output=True)
+                self.logger.debug(f"The output from merging command '{output}'")
+            except subprocess.CalledProcessError as cpe:
+                self.logger.error(f"Merging pr {pr} failed with reason {cpe.output}")
+                continue
 
     def check_all_containers(self) -> int:
         if not self.is_authenticated():
@@ -193,9 +234,7 @@ class AutoMerger:
                 self.clean_dirs()
                 self.logger.error(f"Something went wrong {self.container_name}.")
                 continue
-            self.clean_dirs()
         return 0
-
 
     def print_pull_request_to_merge(self):
         # Do not print anything in case we do not have PR.
@@ -224,14 +263,9 @@ class AutoMerger:
         print('\n'.join(self.approval_body))
 
     def send_results(self, recipients):
-        self.logger.debug(f"Recepients are: {recipients}")
+        self.logger.debug(f"Recipients are: {recipients}")
         if not recipients:
             return 1
         sender_class = EmailSender(recipient_email=list(recipients))
         subject_msg = "Pull request statuses for organization https://gibhub.com/sclorg"
         sender_class.send_email(subject_msg, self.approval_body)
-
-
-def run():
-    auto_merger = AutoMerger()
-    auto_merger.check_all_containers()
