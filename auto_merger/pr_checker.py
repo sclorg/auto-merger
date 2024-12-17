@@ -289,8 +289,3 @@ class PRStatusChecker:
         sender_class = EmailSender(recipient_email=list(recipients))
         subject_msg = "Pull request statuses for organization https://gibhub.com/sclorg"
         sender_class.send_email(subject_msg, self.blocked_body + self.approval_body)
-
-
-def run():
-    auto_merger = PRStatusChecker()
-    auto_merger.check_all_containers()
