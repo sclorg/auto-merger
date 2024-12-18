@@ -173,22 +173,19 @@ class AutoMerger:
             approval_count = self.check_pr_approvals(pr["reviews"])
             if not self.check_pr_lifetime(pr=pr):
                 continue
-            self.pr_to_merge[self.container_name] = {
+            self.pr_to_merge[self.container_name].append({
                 "number": pr["number"],
                 "approvals": approval_count,
                 "pr_dict": {
                     "title": pr["title"],
                 }
-            }
+            })
 
     def clone_repo(self):
-        self.temp_dir = utils.temporary_dir()
         utils.run_command(
             f"gh repo clone https://github.com/sclorg/{self.container_name} {self.temp_dir}/{self.container_name}"
         )
         self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
-        if self.container_dir.exists():
-            os.chdir(self.container_dir)
 
     def merge_pull_requests(self):
         for container in UPSTREAM_REPOS:
@@ -196,7 +193,8 @@ class AutoMerger:
             self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
             with cwd(self.container_dir) as _:
                 self.merge_pr()
-            self.clean_dirs()
+        os.chdir(self.current_dir)
+        self.clean_dirs()
 
 
     def clean_dirs(self):
@@ -206,34 +204,40 @@ class AutoMerger:
 
     def merge_pr(self):
         for pr in self.pr_to_merge[self.container_name]:
-            self.logger.info(f"Let's try to merge {pr['number']}....")
-            try:
-                output = utils.run_command(f"gh pr merge {pr['number']}", return_output=True)
-                self.logger.debug(f"The output from merging command '{output}'")
-            except subprocess.CalledProcessError as cpe:
-                self.logger.error(f"Merging pr {pr} failed with reason {cpe.output}")
+            if int(pr["approvals"]) < self.approvals:
                 continue
+
+            self.logger.info(f"Let's try to merge {pr['number']}....")
+            # try:
+            #     output = utils.run_command(f"gh pr merge {pr['number']}", return_output=True)
+            #     self.logger.debug(f"The output from merging command '{output}'")
+            # except subprocess.CalledProcessError as cpe:
+            #     self.logger.error(f"Merging pr {pr} failed with reason {cpe.output}")
+            #     continue
 
     def check_all_containers(self) -> int:
         if not self.is_authenticated():
             return 1
+        self.temp_dir = utils.temporary_dir()
         for container in UPSTREAM_REPOS:
             self.container_name = container
             self.repo_data = []
             self.clone_repo()
-            if not self.is_correct_repo():
-                self.logger.error(f"This is not correct repo {self.container_name}.")
-                self.clean_dirs()
+            if not self.container_dir.exists():
                 continue
-            if self.container_name not in self.pr_to_merge:
-                self.pr_to_merge[self.container_name] = []
-            try:
-                self.get_gh_pr_list()
-                self.check_pr_to_merge()
-            except subprocess.CalledProcessError:
-                self.clean_dirs()
-                self.logger.error(f"Something went wrong {self.container_name}.")
-                continue
+            with cwd(self.container_dir) as _:
+                if not self.is_correct_repo():
+                    self.logger.error(f"This is not correct repo {self.container_name}.")
+                    continue
+                if self.container_name not in self.pr_to_merge:
+                    self.pr_to_merge[self.container_name] = []
+                try:
+                    self.get_gh_pr_list()
+                    self.check_pr_to_merge()
+                except subprocess.CalledProcessError:
+                    self.logger.error(f"Something went wrong {self.container_name}.")
+                    continue
+        os.chdir(self.current_dir)
         return 0
 
     def print_pull_request_to_merge(self):
@@ -242,24 +246,25 @@ class AutoMerger:
             return 0
         to_approval: bool = False
         pr_body: List = []
-        for container, pr in self.pr_to_merge.items():
-            if not pr:
-                continue
-            if int(pr["approvals"]) < self.approvals:
-                continue
-            to_approval = True
-            result_pr = f"CAN BE MERGED"
-            pr_body.append(
-                f"<tr><td>https://github.com/sclorg/{container}/pull/{pr['number']}</td>"
-                f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
-            )
-        if to_approval:
-            self.approval_body.append(f"Pull requests that can be merged.")
-            self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
-            self.approval_body.extend(pr_body)
-            self.approval_body.append("</table><br>")
-        else:
-            self.approval_body.append("There are not pull requests to be merged.")
+        is_empty: bool = False
+        for container, pr_list in self.pr_to_merge.items():
+            for pr in pr_list:
+                if not pr:
+                    continue
+                if int(pr["approvals"]) < self.approvals:
+                    continue
+                to_approval = True
+                result_pr = f"CAN BE MERGED"
+                pr_body.append(
+                    f"<tr><td>https://github.com/sclorg/{container}/pull/{pr['number']}</td>"
+                    f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
+                )
+            if to_approval:
+                self.approval_body.append(f"Pull requests that can be merged.")
+                self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
+                self.approval_body.extend(pr_body)
+                self.approval_body.append("</table><br>")
+                is_empty = True
         print('\n'.join(self.approval_body))
 
     def send_results(self, recipients):
@@ -268,4 +273,7 @@ class AutoMerger:
             return 1
         sender_class = EmailSender(recipient_email=list(recipients))
         subject_msg = "Pull request statuses for organization https://gibhub.com/sclorg"
-        sender_class.send_email(subject_msg, self.approval_body)
+        if self.approval_body:
+            sender_class.send_email(subject_msg, self.approval_body)
+        else:
+            self.logger.info("Nothing to send.")
