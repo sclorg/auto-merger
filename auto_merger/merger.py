@@ -35,7 +35,7 @@ from pathlib import Path
 import pytest
 
 from auto_merger import utils
-from auto_merger.constants import UPSTREAM_REPOS
+from auto_merger.config import Config
 from auto_merger.utils import setup_logger, cwd
 from auto_merger.email import EmailSender
 
@@ -45,11 +45,13 @@ class AutoMerger:
     container_dir: Path
     current_dir = os.getcwd()
 
-    def __init__(self, github_labels, approvals: int = 2, pr_lifetime: int = 1):
+    def __init__(self, config: Config):
         self.logger = setup_logger("AutoMerger")
-        self.approval_labels = list(github_labels)
-        self.pr_lifetime = pr_lifetime
-        self.approvals = approvals
+        self.config = config
+        self.approval_labels = self.config.github["approval_labels"]
+        self.blocking_labels = self.config.github["blocker_labels"]
+        self.approvals = self.config.github["approvals"]
+        self.pr_lifetime = self.config.github["pr_lifetime"]
         self.logger.debug(f"GitHub Labels: {self.approval_labels}")
         self.logger.debug(f"Approvals Labels: {self.approvals}")
         self.logger.debug(f"PR lifetime Labels: {self.pr_lifetime}")
@@ -188,7 +190,7 @@ class AutoMerger:
         self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
 
     def merge_pull_requests(self):
-        for container in UPSTREAM_REPOS:
+        for container in self.config.github["repos"]:
             self.container_name = container
             self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
             with cwd(self.container_dir) as _:
@@ -208,18 +210,18 @@ class AutoMerger:
                 continue
 
             self.logger.info(f"Let's try to merge {pr['number']}....")
-            # try:
-            #     output = utils.run_command(f"gh pr merge {pr['number']}", return_output=True)
-            #     self.logger.debug(f"The output from merging command '{output}'")
-            # except subprocess.CalledProcessError as cpe:
-            #     self.logger.error(f"Merging pr {pr} failed with reason {cpe.output}")
-            #     continue
+            try:
+                output = utils.run_command(f"gh pr merge {pr['number']}", return_output=True)
+                self.logger.debug(f"The output from merging command '{output}'")
+            except subprocess.CalledProcessError as cpe:
+                self.logger.error(f"Merging pr {pr} failed with reason {cpe.output}")
+                continue
 
     def check_all_containers(self) -> int:
         if not self.is_authenticated():
             return 1
         self.temp_dir = utils.temporary_dir()
-        for container in UPSTREAM_REPOS:
+        for container in self.config.github["repos"]:
             self.container_name = container
             self.repo_data = []
             self.clone_repo()

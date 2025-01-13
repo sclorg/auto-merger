@@ -21,32 +21,13 @@
 # SOFTWARE.
 
 
-import logging
-import click
-import sys
-
-from auto_merger.config import pass_global_config, Config
-from auto_merger.exceptions import AutoMergerConfigException
-from auto_merger import api
-logger = logging.getLogger(__name__)
+class AutoMergerException(Exception):
+    pass
 
 
-@click.command("merger")
-@click.option("--print-results", is_flag=True, help="Prints readable summary")
-@click.option("--send-email", multiple=True, help="Specify email addresses to which the mail will be sent.")
-@pass_global_config
-def merger(ctx, print_results, send_email):
-    logger.debug(ctx.debug)
-    try:
-        c = Config.get_default_config()
-        if not c:
-            logger.error("Default config does not exist")
-            sys.exit(10)
-        if not c.check_mandatory_fields():
-            logger.error("Yaml does not contain some mandatory fields. See output")
-            sys.exit(2)
-    except AutoMergerConfigException:
-        sys.exit(10)
-    ret_value = api.merger(config=c, print_results=print_results, send_email=send_email)
-    sys.exit(ret_value)
+class AutoMergerNetworkException(Exception):
+    pass
 
+
+class AutoMergerConfigException(Exception):
+    pass

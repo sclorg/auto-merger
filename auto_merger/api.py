@@ -21,22 +21,21 @@
 # SOFTWARE.
 
 import logging
-import sys
 
-from pathlib import Path
-from typing import Dict
+from typing import List
 
 from auto_merger.pr_checker import PRStatusChecker
+from auto_merger.config import Config
 from auto_merger.merger import AutoMerger
 
 logger = logging.getLogger(__name__)
 
 
-def pr_checker(print_results, github_labels, blocking_labels, approvals, send_email) -> int:
+def pull_request_checker(config: Config, print_results: bool, send_email: List[str]) -> int:
     """
     Checks NVR from brew build against pulp
     """
-    pr_status_checker = PRStatusChecker(github_labels, blocking_labels, approvals)
+    pr_status_checker = PRStatusChecker(config=config)
     ret_value = pr_status_checker.check_all_containers()
     if ret_value != 0:
         return ret_value
@@ -48,8 +47,8 @@ def pr_checker(print_results, github_labels, blocking_labels, approvals, send_em
     return ret_value
 
 
-def merger(print_results, merger_labels, approvals, pr_lifetime, send_email) -> int:
-    auto_merger = AutoMerger(merger_labels, approvals, pr_lifetime)
+def merger(config: Config, print_results: bool, send_email: List[str]) -> int:
+    auto_merger = AutoMerger(config=config)
     ret_value = auto_merger.check_all_containers()
     if ret_value != 0:
         return ret_value

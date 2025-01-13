@@ -35,6 +35,7 @@ from auto_merger import utils
 from auto_merger.constants import UPSTREAM_REPOS
 from auto_merger.utils import setup_logger
 from auto_merger.email import EmailSender
+from auto_merger.config import Config
 
 
 class PRStatusChecker:
@@ -42,12 +43,13 @@ class PRStatusChecker:
     container_dir: Path
     current_dir = os.getcwd()
 
-    def __init__(self, github_labels, blocking_labels, approvals: int = 2):
+    def __init__(self, config: Config):
         self.logger = setup_logger("AutoMerger")
-        self.github_labels = list(github_labels)
-        self.blocking_labels = list(blocking_labels)
-        self.approvals = approvals
-        self.logger.debug(f"GitHub Labels: {self.github_labels}")
+        self.config = config
+        self.approval_labels = self.config.github["approval_labels"]
+        self.blocking_labels = self.config.github["blocker_labels"]
+        self.approvals = self.config.github["approvals"]
+        self.logger.debug(f"GitHub Labels: {self.approval_labels}")
         self.logger.debug(f"GitHub Blocking Labels: {self.blocking_labels}")
         self.logger.debug(f"Approvals Labels: {self.approvals}")
         self.blocked_pr = {}
@@ -189,7 +191,7 @@ class PRStatusChecker:
     def clone_repo(self):
         temp_dir = utils.temporary_dir()
         utils.run_command(
-            f"gh repo clone https://github.com/sclorg/{self.container_name} {temp_dir}/{self.container_name}"
+            f"gh repo clone https://github.com/{self.config.github["namespace"]}/{self.container_name} {temp_dir}/{self.container_name}"
         )
         self.container_dir = Path(temp_dir) / f"{self.container_name}"
         if self.container_dir.exists():
@@ -207,7 +209,7 @@ class PRStatusChecker:
     def check_all_containers(self) -> int:
         if not self.is_authenticated():
             return 1
-        for container in UPSTREAM_REPOS:
+        for container in self.config.github["repos"]:
             self.container_name = container
             self.repo_data = []
             self.clone_repo()

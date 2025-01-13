@@ -25,7 +25,8 @@ import logging
 import click
 import sys
 
-from auto_merger.config import pass_global_config
+from auto_merger.config import Config, pass_global_config
+from auto_merger.exceptions import AutoMergerConfigException
 from auto_merger import api
 
 logger = logging.getLogger(__name__)
@@ -33,17 +34,23 @@ logger = logging.getLogger(__name__)
 
 @click.command("pr-checker")
 @click.option("--print-results", is_flag=True, help="Prints readable summary")
-@click.option("--github-labels", required=True, multiple=True,
-              help="Specify Git Hub labels to meet criteria")
-@click.option("--blocking-labels", multiple=True,
-              help="Specify Git Hub labels that blocks PR to merge")
 @click.option("--send-email", multiple=True, help="Specify email addresses to which the mail will be sent.")
 @click.option("--approvals",
               default=2, type=int,
               help="Specify number of approvals to automatically merge PR. Default 2")
 @pass_global_config
-def pr_checker(ctx, print_results, github_labels, blocking_labels, approvals, send_email):
+def pr_checker(ctx, print_results, send_email):
     logger.debug(ctx.debug)
-    ret_value = api.pr_checker(print_results, github_labels, blocking_labels, approvals, send_email)
+    try:
+        c = Config.get_default_config()
+        if not c:
+            logger.error("Default config does not exist")
+            sys.exit(10)
+        if not c.check_mandatory_fields():
+            logger.error("Yaml does not contain some mandatory fields. See output")
+            sys.exit(2)
+    except AutoMergerConfigException:
+        sys.exit(10)
+    ret_value = api.pull_request_checker(config=c, print_results=print_results, send_email=send_email)
     sys.exit(ret_value)
 
