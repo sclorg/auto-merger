@@ -32,7 +32,6 @@ from typing import List
 from pathlib import Path
 
 from auto_merger import utils
-from auto_merger.constants import UPSTREAM_REPOS
 from auto_merger.utils import setup_logger
 from auto_merger.email import EmailSender
 from auto_merger.config import Config
@@ -49,6 +48,7 @@ class PRStatusChecker:
         self.approval_labels = self.config.github["approval_labels"]
         self.blocking_labels = self.config.github["blocker_labels"]
         self.approvals = self.config.github["approvals"]
+        self.namespace = self.config.github["namespace"]
         self.logger.debug(f"GitHub Labels: {self.approval_labels}")
         self.logger.debug(f"GitHub Blocking Labels: {self.blocking_labels}")
         self.logger.debug(f"Approvals Labels: {self.approvals}")
@@ -191,7 +191,7 @@ class PRStatusChecker:
     def clone_repo(self):
         temp_dir = utils.temporary_dir()
         utils.run_command(
-            f"gh repo clone https://github.com/{self.config.github["namespace"]}/{self.container_name} {temp_dir}/{self.container_name}"
+            f"gh repo clone https://github.com/{self.namespace}/{self.container_name} {temp_dir}/{self.container_name}"
         )
         self.container_dir = Path(temp_dir) / f"{self.container_name}"
         if self.container_dir.exists():
@@ -258,7 +258,7 @@ class PRStatusChecker:
             for pr in pull_requests:
                 blocked_labels = self.get_blocked_labels(pr["pr_dict"])
                 self.blocked_body.append(
-                    f"<tr><td>https://github.com/sclorg/{container}/pull/{pr['number']}</td>"
+                    f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
                     f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{' '.join(blocked_labels)}</p></td></tr>"
                 )
             self.blocked_body.append("</table><br><br>")
@@ -278,7 +278,7 @@ class PRStatusChecker:
             else:
                 result_pr = f"Missing {self.approvals-int(pr['approvals'])} APPROVAL"
             self.approval_body.append(
-                f"<tr><td>https://github.com/sclorg/{container}/pull/{pr['number']}</td>"
+                f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
                 f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
             )
         self.approval_body.append("</table><br>")
@@ -289,5 +289,5 @@ class PRStatusChecker:
         if not recipients:
             return 1
         sender_class = EmailSender(recipient_email=list(recipients))
-        subject_msg = "Pull request statuses for organization https://gibhub.com/sclorg"
+        subject_msg = f"Pull request statuses for organization https://github.com/{self.namespace}"
         sender_class.send_email(subject_msg, self.blocked_body + self.approval_body)

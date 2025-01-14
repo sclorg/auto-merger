@@ -11,7 +11,7 @@ def test_create_email_no_recepients():
     assert es.mime_msg
     assert es.mime_msg["From"] == "phracek@redhat.com"
     assert "phracek@redhat.com" in es.mime_msg["To"]
-    assert "sclorg@redhat.com" in es.mime_msg["To"]
+    assert "sclorg@redhat.com" not in es.mime_msg["To"]
     assert es.mime_msg["Subject"] == "something important"
 
 
@@ -21,6 +21,6 @@ def test_create_email_with_recipients():
     assert es.mime_msg
     assert es.mime_msg["From"] == "phracek@redhat.com"
     assert "phracek@redhat.com" in es.mime_msg["To"]
-    assert "sclorg@redhat.com" in es.mime_msg["To"]
+    assert "sclorg@redhat.com" not in es.mime_msg["To"]
     assert "foo@bar.com" in es.mime_msg["To"]
     assert es.mime_msg["Subject"] == "something important"

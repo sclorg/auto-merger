@@ -51,6 +51,7 @@ class AutoMerger:
         self.approval_labels = self.config.github["approval_labels"]
         self.blocking_labels = self.config.github["blocker_labels"]
         self.approvals = self.config.github["approvals"]
+        self.namespace = self.config.github["namespace"]
         self.pr_lifetime = self.config.github["pr_lifetime"]
         self.logger.debug(f"GitHub Labels: {self.approval_labels}")
         self.logger.debug(f"Approvals Labels: {self.approvals}")
@@ -185,7 +186,7 @@ class AutoMerger:
 
     def clone_repo(self):
         utils.run_command(
-            f"gh repo clone https://github.com/sclorg/{self.container_name} {self.temp_dir}/{self.container_name}"
+            f"gh repo clone https://github.com/{self.namespace}/{self.container_name} {self.temp_dir}/{self.container_name}"
         )
         self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
 
@@ -258,7 +259,7 @@ class AutoMerger:
                 to_approval = True
                 result_pr = f"CAN BE MERGED"
                 pr_body.append(
-                    f"<tr><td>https://github.com/sclorg/{container}/pull/{pr['number']}</td>"
+                    f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
                     f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
                 )
             if to_approval:
@@ -274,7 +275,7 @@ class AutoMerger:
         if not recipients:
             return 1
         sender_class = EmailSender(recipient_email=list(recipients))
-        subject_msg = "Pull request statuses for organization https://gibhub.com/sclorg"
+        subject_msg = f"Pull request statuses for organization https://github.com/{self.namespace}"
         if self.approval_body:
             sender_class.send_email(subject_msg, self.approval_body)
         else:

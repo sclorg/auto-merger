@@ -29,7 +29,7 @@ from email.mime.text import MIMEText
 from typing import List
 
 
-DEFAULT_MAILS = ["phracek@redhat.com", "sclorg@redhat.com"]
+DEFAULT_MAILS = ["phracek@redhat.com"]
 
 
 class EmailSender:

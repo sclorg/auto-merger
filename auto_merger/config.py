@@ -100,6 +100,9 @@ class Config:
         if "repos" not in cls.github:
             logger.error("In github section is missing 'repos'. No repositories are specified.")
             config_correct = False
+        if "namespace" not in cls.github:
+            logger.error("In github section is missing 'namespace'. are specified.")
+            config_correct = False
         return config_correct
 
     @classmethod
