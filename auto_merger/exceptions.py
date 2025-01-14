@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
-
 # MIT License
 #
-# Copyright (c) 2024 Red Hat, Inc.
+# Copyright (c) 2018-2019 Red Hat, Inc.
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,19 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-UPSTREAM_REPOS = [
-    "httpd-container",
-    "s2i-base-container",
-    "s2i-perl-container",
-    "s2i-nodejs-container",
-    "s2i-php-container",
-    "s2i-ruby-container",
-    "s2i-python-container",
-    "nginx-container",
-    "mysql-container",
-    "postgresql-container",
-    "mariadb-container",
-    "redis-container",
-    "valkey-container",
-    "varnish-container",
-]
+
+class AutoMergerException(Exception):
+    pass
+
+
+class AutoMergerNetworkException(Exception):
+    pass
+
+
+class AutoMergerConfigException(Exception):
+    pass

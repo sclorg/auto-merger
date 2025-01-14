@@ -26,8 +26,6 @@
 # Authors: Petr Hracek <phracek@redhat.com>
 
 import logging
-import sys
-
 import click
 
 
@@ -43,7 +41,7 @@ logger = logging.getLogger(__name__)
 @click.pass_context
 def auto_merger(ctx, debug):
     ctx.obj = GlobalConfig(debug=debug)
-    if debug:
+    if ctx.obj.debug:
         setup_logger("auto-merger", level=logging.DEBUG)
         logger.debug("Logging set to DEBUG")
     else:

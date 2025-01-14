@@ -25,23 +25,31 @@ import logging
 import click
 import sys
 
-from auto_merger.config import pass_global_config
+from auto_merger.config import pass_global_config, Config
+from auto_merger.exceptions import AutoMergerConfigException
+from auto_merger.utils import check_mandatory_config_fields
+
 from auto_merger import api
+
 logger = logging.getLogger(__name__)
 
 
 @click.command("merger")
 @click.option("--print-results", is_flag=True, help="Prints readable summary")
-@click.option("--merger-labels", required=True, multiple=True,
-              help="Specify Git Hub labels to meet criteria")
 @click.option("--send-email", multiple=True, help="Specify email addresses to which the mail will be sent.")
-@click.option("--approvals",
-              default=2, type=int,
-              help="Specify number of approvals to automatically merge PR. Default 2")
-@click.option("--pr-lifetime", default=1, type=int, help="Specify a day for which PR should opened. Default is 1 day. To invalidate set 0")
 @pass_global_config
-def merger(ctx, print_results, merger_labels, approvals, pr_lifetime, send_email):
+def merger(ctx, print_results, send_email):
     logger.debug(ctx.debug)
-    ret_value = api.merger(print_results, merger_labels, approvals, pr_lifetime, send_email)
+    try:
+        c = Config.get_default_config()
+        if not c:
+            logger.error("Default config does not exist")
+            sys.exit(10)
+        if not check_mandatory_config_fields(c):
+            logger.error("Yaml does not contain some mandatory fields. See output")
+            sys.exit(2)
+    except AutoMergerConfigException:
+        sys.exit(10)
+    ret_value = api.merger(config=c, print_results=print_results, send_email=send_email)
     sys.exit(ret_value)
 

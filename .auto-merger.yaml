@@ -1,0 +1,28 @@
+github:
+  namespace: "sclorg"
+  repos:
+    - valkey-container
+    - mariadb-container
+    - mysql-container
+    - postgresql-container
+    - nginx-container
+    - httpd-container
+    - redis-container
+    - s2i-php-container
+    - s2i-python-container
+    - s2i-ruby-container
+    - s2i-perl-container
+    - s2i-nodejs-container
+  # How many approvals should have PR - default is 2
+  approvals: 2
+  # How many days, PR should be opened - default is 1 day
+  pr_lifetime: 1
+  # Labels that blockes merges
+  blocker_labels:
+    - "pr/failing-ci"
+    - "pr/missing-review"
+  # Labels that should be present in pull request before merging
+  approval_labels:
+    - "READY-to-MERGE"
+gitlab:
+  namespace: "redhat/rhel/containers"
