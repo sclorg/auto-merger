@@ -29,6 +29,8 @@ import os
 from pathlib import Path
 from contextlib import contextmanager
 
+from auto_merger.config import Config
+
 logger = logging.getLogger(__name__)
 
 
@@ -104,6 +106,21 @@ def setup_logger(logger_id, level=logging.DEBUG):
     logger.addHandler(stderr)
     return logger
 
+def check_mandatory_config_fields(config: Config) -> bool:
+    config_correct: bool = True
+    if "blocker_labels" not in config.github:
+        logger.error("In github section is missing 'blocker_labels'")
+        config_correct = False
+    if "approval_labels" not in config.github:
+        logger.error("In github section is missing 'approval_labels'")
+        config_correct = False
+    if "repos" not in config.github:
+        logger.error("In github section is missing 'repos'. No repositories are specified.")
+        config_correct = False
+    if "namespace" not in config.github:
+        logger.error("In github section is missing 'namespace'. are specified.")
+        config_correct = False
+    return config_correct
 
 @contextmanager
 def cwd(path):

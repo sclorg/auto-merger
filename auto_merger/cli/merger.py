@@ -27,7 +27,10 @@ import sys
 
 from auto_merger.config import pass_global_config, Config
 from auto_merger.exceptions import AutoMergerConfigException
+from auto_merger.utils import check_mandatory_config_fields
+
 from auto_merger import api
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +45,7 @@ def merger(ctx, print_results, send_email):
         if not c:
             logger.error("Default config does not exist")
             sys.exit(10)
-        if not c.check_mandatory_fields():
+        if not check_mandatory_config_fields(c):
             logger.error("Yaml does not contain some mandatory fields. See output")
             sys.exit(2)
     except AutoMergerConfigException:

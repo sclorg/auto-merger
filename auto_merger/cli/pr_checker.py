@@ -27,6 +27,7 @@ import sys
 
 from auto_merger.config import Config, pass_global_config
 from auto_merger.exceptions import AutoMergerConfigException
+from auto_merger.utils import check_mandatory_config_fields
 from auto_merger import api
 
 logger = logging.getLogger(__name__)
@@ -35,9 +36,6 @@ logger = logging.getLogger(__name__)
 @click.command("pr-checker")
 @click.option("--print-results", is_flag=True, help="Prints readable summary")
 @click.option("--send-email", multiple=True, help="Specify email addresses to which the mail will be sent.")
-@click.option("--approvals",
-              default=2, type=int,
-              help="Specify number of approvals to automatically merge PR. Default 2")
 @pass_global_config
 def pr_checker(ctx, print_results, send_email):
     logger.debug(ctx.debug)
@@ -46,7 +44,7 @@ def pr_checker(ctx, print_results, send_email):
         if not c:
             logger.error("Default config does not exist")
             sys.exit(10)
-        if not c.check_mandatory_fields():
+        if not check_mandatory_config_fields(c):
             logger.error("Yaml does not contain some mandatory fields. See output")
             sys.exit(2)
     except AutoMergerConfigException:

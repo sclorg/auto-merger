@@ -42,8 +42,9 @@ def pull_request_checker(config: Config, print_results: bool, send_email: List[s
     if print_results:
         pr_status_checker.print_blocked_pull_request()
         pr_status_checker.print_approval_pull_request()
-    if not pr_status_checker.send_results(send_email):
-        return 1
+    if send_email:
+        if not pr_status_checker.send_results(send_email):
+            return 1
     return ret_value
 
 
@@ -55,6 +56,7 @@ def merger(config: Config, print_results: bool, send_email: List[str]) -> int:
     if print_results:
         auto_merger.print_pull_request_to_merge()
     auto_merger.merge_pull_requests()
-    if not auto_merger.send_results(send_email):
-        return 1
+    if send_email:
+        if not auto_merger.send_results(send_email):
+            return 1
     return ret_value

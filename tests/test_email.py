@@ -6,11 +6,11 @@ from auto_merger.email import EmailSender
 
 
 def test_create_email_no_recepients():
-    es = EmailSender(recipient_email=[])
+    es = EmailSender(recipient_email=["foobar@test.com"])
     es.create_email_msg("something important")
     assert es.mime_msg
     assert es.mime_msg["From"] == "phracek@redhat.com"
-    assert "phracek@redhat.com" in es.mime_msg["To"]
+    assert "foobar@test.com" in es.mime_msg["To"]
     assert "sclorg@redhat.com" not in es.mime_msg["To"]
     assert es.mime_msg["Subject"] == "something important"
 
@@ -20,7 +20,6 @@ def test_create_email_with_recipients():
     es.create_email_msg("something important")
     assert es.mime_msg
     assert es.mime_msg["From"] == "phracek@redhat.com"
-    assert "phracek@redhat.com" in es.mime_msg["To"]
     assert "sclorg@redhat.com" not in es.mime_msg["To"]
     assert "foo@bar.com" in es.mime_msg["To"]
     assert es.mime_msg["Subject"] == "something important"

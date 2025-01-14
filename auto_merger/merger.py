@@ -32,7 +32,6 @@ from datetime import datetime, timedelta
 from typing import List
 from pathlib import Path
 
-import pytest
 
 from auto_merger import utils
 from auto_merger.config import Config

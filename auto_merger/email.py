@@ -21,16 +21,14 @@
 # SOFTWARE.
 
 import smtplib
-
+import logging
 
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List
 
-
-DEFAULT_MAILS = ["phracek@redhat.com"]
-
+logger = logging.getLogger(__name__)
 
 class EmailSender:
 
@@ -41,8 +39,11 @@ class EmailSender:
         self.send_to = ""
 
     def create_email_msg(self, subject_msg: str):
+        if not self.recipient_email:
+            logger.error("No recipients specified. Use --send-email")
+            return None
         self.send_from = "phracek@redhat.com"
-        self.send_to = DEFAULT_MAILS
+        self.send_to = self.recipient_email
         if self.recipient_email is not None:
             self.send_to.extend(self.recipient_email)
         self.mime_msg["From"] = self.send_from

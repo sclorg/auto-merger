@@ -58,12 +58,7 @@ class Config:
 
     @classmethod
     def get_default_config(cls) -> "Config":
-        xdg_config_home = os.getenv("XDG_CONFIG_HOME")
-        if xdg_config_home:
-            config_file_name = Path(xdg_config_home)
-        else:
-            config_file_name = Path.home() / ".auto-merger.yaml"
-
+        config_file_name = Path.home() / ".auto-merger.yaml"
         logger.debug(f"Loading user config from directory: {config_file_name}")
         loaded_config: dict = {}
         if config_file_name.is_file():
@@ -87,23 +82,6 @@ class Config:
                 config.github["pr_lifetime"] = 1
         logger.debug(str(config))
         return config
-
-    @classmethod
-    def check_mandatory_fields(cls) -> bool:
-        config_correct: bool = True
-        if "blocker_labels" not in cls.github:
-            logger.error("In github section is missing 'blocker_labels'")
-            config_correct = False
-        if "merge_labels" not in cls.github:
-            logger.error("In github section is missing 'merge_labels'")
-            config_correct = False
-        if "repos" not in cls.github:
-            logger.error("In github section is missing 'repos'. No repositories are specified.")
-            config_correct = False
-        if "namespace" not in cls.github:
-            logger.error("In github section is missing 'namespace'. are specified.")
-            config_correct = False
-        return config_correct
 
     @classmethod
     def get_user_config(cls, url: str):
