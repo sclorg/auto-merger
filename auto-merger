@@ -3,7 +3,7 @@
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2016-2018 CWT Authors
+# Copyright (c) 2025  Authors
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,30 +27,44 @@
 
 import logging
 import click
+import sys
 
-
-from auto_merger.config import GlobalConfig
-from auto_merger.utils import setup_logger
+from auto_merger.config import Config
+from auto_merger.utils import setup_logger, check_mandatory_config_fields
 from auto_merger.cli.pr_checker import pr_checker
 from auto_merger.cli.merger import merger
-logger = logging.getLogger(__name__)
+from auto_merger.exceptions import AutoMergerConfigException
 
+logger = logging.getLogger("auto-merger")
 
 @click.group("auto-merger")
-@click.option("-d", "--debug", is_flag=True, help="Enable debug logs")
+@click.option("-d", "--debug", is_flag=True, default=False, help="Enable debug logs")
 @click.pass_context
 def auto_merger(ctx, debug):
-    ctx.obj = GlobalConfig(debug=debug)
+    if debug:
+        setup_logger(level=logging.DEBUG)
+
+    try:
+        c = Config.get_default_config()
+        if not c:
+            print("Default config does not exist")
+            sys.exit(10)
+        if not check_mandatory_config_fields(c):
+            print("Yaml does not contain some mandatory fields. See output")
+            sys.exit(2)
+    except AutoMergerConfigException:
+        sys.exit(10)
+    ctx.obj = c
+    logger.debug(f"auto_merger Debug: {ctx.obj.debug}")
     if ctx.obj.debug:
-        setup_logger("auto-merger", level=logging.DEBUG)
-        logger.debug("Logging set to DEBUG")
+        setup_logger(level=logging.DEBUG)
     else:
-        setup_logger("auto-merger", level=logging.INFO)
-        logger.debug("Logging set to INFO")
+        setup_logger(level=logging.INFO)
+    logger.debug("Let's get analyses")
 
 auto_merger.add_command(pr_checker)
 auto_merger.add_command(merger)
 
 
 if __name__ == "__main__":
-    auto_merger(obj={})
+    auto_merger()

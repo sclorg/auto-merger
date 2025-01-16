@@ -23,7 +23,6 @@
 import subprocess
 import logging
 import tempfile
-import sys
 import os
 
 from pathlib import Path
@@ -31,7 +30,8 @@ from contextlib import contextmanager
 
 from auto_merger.config import Config
 
-logger = logging.getLogger(__name__)
+
+logger = logging.getLogger("auto-merger")
 
 
 def run_command(
@@ -39,7 +39,6 @@ def run_command(
     return_output: bool = True,
     ignore_error: bool = False,
     shell: bool = True,
-    debug: bool = False,
     **kwargs,
 ):
     """
@@ -80,31 +79,37 @@ def temporary_dir(prefix: str = "automerger") -> str:
     logger.debug(f"AutoMerger: Temporary dir name: {temp_file.name}")
     return temp_file.name
 
+class AutoMergerFormatter(logging.Formatter):
+    def __init__(
+        self,
+        fmt=None,
+        datefmt=None,
+        *args,
+    ):
+        fmt = (
+            fmt
+            or "%(name)s - %(levelname)s: %(message)s"
+        )
+        datefmt = datefmt or "%Y-%m-%d %H:%M:%S"
+        super().__init__(fmt, datefmt, *args)
 
-def setup_logger(logger_id, level=logging.DEBUG):
-    logger = logging.getLogger(logger_id)
+
+def setup_logger(level=logging.INFO, handler_class=logging.StreamHandler, handler_kwargs=None, datefmt: str = ""):
+    logger = logging.getLogger("auto-merger")
     logger.setLevel(level)
-    format_str = "%(name)s - %(levelname)s: %(message)s"
-    # Debug handler
-    debug = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter(format_str)
-    debug.setLevel(logging.DEBUG)
-    debug.addFilter(lambda r: True if r.levelno == logging.DEBUG else False)
-    debug.setFormatter(formatter)
-    logger.addHandler(debug)
-    # Info handler
-    info = logging.StreamHandler(sys.stdout)
-    info.setLevel(logging.DEBUG)
-    info.addFilter(lambda r: True if r.levelno == logging.INFO else False)
-    logger.addHandler(info)
-    # Warning, error, critical handler
-    stderr = logging.StreamHandler(sys.stderr)
-    formatter = logging.Formatter(format_str)
-    stderr.setLevel(logging.WARN)
-    stderr.addFilter(lambda r: True if r.levelno >= logging.WARN else False)
-    stderr.setFormatter(formatter)
-    logger.addHandler(stderr)
-    return logger
+    logger.debug(f"Logging set to {logging.getLevelName(level)}")
+
+    # do not re-add handlers if they are already present
+    if not [x for x in logger.handlers if isinstance(x, handler_class)]:
+        # Debug handler
+        handler_kwargs = handler_kwargs or {}
+        handler = handler_class(**handler_kwargs)
+        handler.setLevel(level)
+
+        formatter = AutoMergerFormatter(None, datefmt=datefmt)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
 
 def check_mandatory_config_fields(config: Config) -> bool:
     config_correct: bool = True
