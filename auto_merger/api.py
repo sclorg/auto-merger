@@ -28,7 +28,7 @@ from auto_merger.pr_checker import PRStatusChecker
 from auto_merger.config import Config
 from auto_merger.merger import AutoMerger
 
-logger = logging.getLogger("auto-merger")
+logger = logging.getLogger(__name__)
 
 def pull_request_checker(config: Config, send_email: List[str]) -> int:
     """

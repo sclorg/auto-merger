@@ -31,7 +31,7 @@ from contextlib import contextmanager
 from auto_merger.config import Config
 
 
-logger = logging.getLogger("auto-merger")
+logger = logging.getLogger(__name__)
 
 
 def run_command(
@@ -79,36 +79,13 @@ def temporary_dir(prefix: str = "automerger") -> str:
     logger.debug(f"AutoMerger: Temporary dir name: {temp_file.name}")
     return temp_file.name
 
-class AutoMergerFormatter(logging.Formatter):
-    def __init__(
-        self,
-        fmt=None,
-        datefmt=None,
-        *args,
-    ):
-        fmt = (
-            fmt
-            or "%(name)s - %(levelname)s: %(message)s"
-        )
-        datefmt = datefmt or "%Y-%m-%d %H:%M:%S"
-        super().__init__(fmt, datefmt, *args)
 
-
-def setup_logger(level=logging.INFO, handler_class=logging.StreamHandler, handler_kwargs=None, datefmt: str = ""):
-    logger = logging.getLogger("auto-merger")
-    logger.setLevel(level)
-    logger.debug(f"Logging set to {logging.getLevelName(level)}")
-
-    # do not re-add handlers if they are already present
-    if not [x for x in logger.handlers if isinstance(x, handler_class)]:
-        # Debug handler
-        handler_kwargs = handler_kwargs or {}
-        handler = handler_class(**handler_kwargs)
-        handler.setLevel(level)
-
-        formatter = AutoMergerFormatter(None, datefmt=datefmt)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+def setup_logger(level=logging.INFO):
+    if level == logging.INFO:
+        format_str = "%(message)s"
+    else:
+        format_str = "%(name)s - %(levelname)s: %(message)s"
+    logging.basicConfig(level=level, format=format_str, handlers=[logging.StreamHandler()])
 
 
 def check_mandatory_config_fields(config: Config) -> bool:
@@ -126,6 +103,7 @@ def check_mandatory_config_fields(config: Config) -> bool:
         logger.error("In github section is missing 'namespace'. are specified.")
         config_correct = False
     return config_correct
+
 
 @contextmanager
 def cwd(path):

@@ -24,6 +24,7 @@
 
 
 import json
+import logging
 import subprocess
 import os
 import shutil
@@ -39,8 +40,8 @@ from auto_merger.config import Config
 from auto_merger.utils import cwd
 from auto_merger.email import EmailSender
 
-logger = logging.getLogger("auto-merger")
 
+logger = logging.getLogger(__name__)
 
 class AutoMerger:
     container_name: str = ""

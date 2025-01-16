@@ -24,6 +24,7 @@
 
 
 import json
+import logging
 import subprocess
 import os
 import shutil
@@ -36,7 +37,7 @@ from auto_merger import utils
 from auto_merger.email import EmailSender
 from auto_merger.config import Config
 
-logger = logging.getLogger("auto-merger")
+logger = logging.getLogger(__name__)
 
 
 class PRStatusChecker:
@@ -50,9 +51,6 @@ class PRStatusChecker:
         self.blocking_labels = self.config.github["blocker_labels"]
         self.approvals = self.config.github["approvals"]
         self.namespace = self.config.github["namespace"]
-        logger.debug(f"GitHub Labels: {self.approval_labels}")
-        logger.debug(f"GitHub Blocking Labels: {self.blocking_labels}")
-        logger.debug(f"Approvals Labels: {self.approvals}")
         self.blocked_pr = {}
         self.pr_to_merge = {}
         self.blocked_body = []
@@ -249,7 +247,7 @@ class PRStatusChecker:
         # Do not print anything in case we do not have PR.
         if not [x for x in self.blocked_pr if self.blocked_pr[x]]:
             return 0
-        print(f"\n\nSUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>")
+        logger.info(f"SUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>")
         self.blocked_body.append(
             f"Pull requests that are blocked by labels <b>[{', '.join(self.blocking_labels)}]</b><br><br>"
         )
@@ -257,12 +255,12 @@ class PRStatusChecker:
         for container, pull_requests in self.blocked_pr.items():
             if not pull_requests:
                 continue
-            print(f"\n{container}\n------\n")
+            logger.info(f"\n{container}\n------\n")
             self.blocked_body.append(f"<b>{container}<b>:")
             self.blocked_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Missing labels</th></tr>")
             for pr in pull_requests:
                 blocked_labels = self.get_blocked_labels(pr["pr_dict"])
-                print(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} {' '.join(blocked_labels)}")
+                logger.info(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} {' '.join(blocked_labels)}")
                 self.blocked_body.append(
                     f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
                     f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{' '.join(blocked_labels)}</p></td></tr>"
@@ -273,7 +271,7 @@ class PRStatusChecker:
         # Do not print anything in case we do not have PR.
         if not [x for x in self.pr_to_merge if self.pr_to_merge[x]]:
             return 0
-        print(f"\n\nSUMMARY\n\nPull requests that can be merged approvals")
+        logger.info(f"SUMMARY\n\nPull requests that can be merged approvals")
         self.approval_body.append(f"Pull requests that can be merged or missing {self.approvals} approvals")
         self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
         for container, pr in self.pr_to_merge.items():
@@ -283,7 +281,7 @@ class PRStatusChecker:
                 result_pr = f"CAN BE MERGED"
             else:
                 result_pr = f"Missing {self.approvals-int(pr['approvals'])} APPROVAL"
-            print(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} - {result_pr}")
+            logger.info(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} - {result_pr}")
             self.approval_body.append(
                 f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
                 f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
@@ -291,7 +289,7 @@ class PRStatusChecker:
         self.approval_body.append("</table><br>")
 
     def send_results(self, recipients):
-        logger.debug(f"Recepients are: {recipients}")
+        logger.debug(f"Recipients are: {recipients}")
         if not recipients:
             return 1
         sender_class = EmailSender(recipient_email=list(recipients))

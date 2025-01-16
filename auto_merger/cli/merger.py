@@ -28,7 +28,8 @@ import sys
 from auto_merger.config import pass_config
 from auto_merger import api
 
-logger = logging.getLogger("auto-merger")
+
+logger = logging.getLogger(__name__)
 
 @click.command("merger")
 @click.option("--send-email", multiple=True, help="Specify email addresses to which the mail will be sent.")
