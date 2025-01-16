@@ -24,7 +24,6 @@
 
 
 import json
-import logging
 import subprocess
 import os
 import shutil
@@ -43,6 +42,7 @@ from auto_merger.email import EmailSender
 
 logger = logging.getLogger(__name__)
 
+
 class AutoMerger:
     container_name: str = ""
     container_dir: Path
@@ -55,8 +55,8 @@ class AutoMerger:
         self.approvals = self.config.github["approvals"]
         self.namespace = self.config.github["namespace"]
         self.pr_lifetime = self.config.github["pr_lifetime"]
-        self.pr_to_merge = {}
-        self.approval_body = []
+        self.pr_to_merge: dict = {}
+        self.approval_body: List = []
         self.repo_data: List = []
         self.temp_dir = ""
 
@@ -86,27 +86,16 @@ class AutoMerger:
     def is_authenticated(self):
         token = os.getenv("GH_TOKEN")
         if token == "":
-            logger.error(f"Environment variable GH_TOKEN is not specified.")
+            logger.error("Environment variable GH_TOKEN is not specified.")
             return False
-        cmd = [f"gh status"]
+        cmd = ["gh status"]
         logger.debug(f"Authentication command: {cmd}")
         try:
-            return_output = utils.run_command(cmd=cmd, return_output=True)
+            utils.run_command(cmd=cmd, return_output=True)
         except subprocess.CalledProcessError as cpe:
             logger.error(f"Authentication to GitHub failed. {cpe}")
             return False
         return True
-
-    def add_approved_pr(self, pr: {}):
-        self.pr_to_merge[self.container_name].append({
-            "number": pr["number"],
-            "pr_dict": {
-                "title": pr["title"],
-                "labels": pr["labels"],
-                "createdAt": pr["createdAt"],
-            }
-        })
-        logger.debug(f"PR {pr['number']} added to approved")
 
     def check_labels_to_merge(self, pr):
         if "labels" not in pr:
@@ -166,7 +155,10 @@ class AutoMerger:
             return False
         for pr in self.repo_data:
             if not self.check_labels_to_merge(pr):
-                logger.debug(f"check_pr_to_merge for {self.container_name}: pull request {pr['number']} did not met labels.")
+                logger.debug(
+                    f"check_pr_to_merge for {self.container_name}: "
+                    f"pull request {pr['number']} did not met labels."
+                )
                 continue
             if "reviews" not in pr:
                 logger.debug(
@@ -183,10 +175,12 @@ class AutoMerger:
                     "title": pr["title"],
                 }
             })
+        return True
 
     def clone_repo(self):
         utils.run_command(
-            f"gh repo clone https://github.com/{self.namespace}/{self.container_name} {self.temp_dir}/{self.container_name}"
+            f"gh repo clone https://github.com/{self.namespace}/{self.container_name} "
+            f"{self.temp_dir}/{self.container_name}"
         )
         self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
 
@@ -198,7 +192,6 @@ class AutoMerger:
                 self.merge_pr()
         os.chdir(self.current_dir)
         self.clean_dirs()
-
 
     def clean_dirs(self):
         os.chdir(self.current_dir)
@@ -246,10 +239,11 @@ class AutoMerger:
     def print_pull_request_to_merge(self):
         # Do not print anything in case we do not have PR.
         if not [x for x in self.pr_to_merge if self.pr_to_merge[x]]:
+            logger.info(f"Nothing to be merged in repos {self.config.github['repos']} "
+                        f"in organization {self.namespace}")
             return 0
         to_approval: bool = False
         pr_body: List = []
-        is_empty: bool = False
         logger.info("SUMMARY")
         for container, pr_list in self.pr_to_merge.items():
             for pr in pr_list:
@@ -258,18 +252,23 @@ class AutoMerger:
                 if int(pr["approvals"]) < self.approvals:
                     continue
                 to_approval = True
-                result_pr = f"CAN BE MERGED"
+                result_pr = "CAN BE MERGED"
                 logger.info(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} -> {result_pr}")
                 pr_body.append(
                     f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
                     f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
                 )
             if to_approval:
-                self.approval_body.append(f"Pull requests that can be merged.")
-                self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
+                self.approval_body.append("Pull requests that can be merged.")
+                self.approval_body.append(
+                    "<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>"
+                )
                 self.approval_body.extend(pr_body)
                 self.approval_body.append("</table><br>")
-                is_empty = True
+        if not to_approval:
+            logger.info(
+                f"Nothing to be merged in repos {self.config.github['repos']} in organization {self.namespace}"
+            )
 
     def send_results(self, recipients):
         logger.debug(f"Recipients are: {recipients}")

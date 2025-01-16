@@ -23,12 +23,12 @@
 import smtplib
 import logging
 
-from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List
 
 logger = logging.getLogger(__name__)
+
 
 class EmailSender:
 
@@ -36,7 +36,7 @@ class EmailSender:
         self.recipient_email = recipient_email
         self.mime_msg = MIMEMultipart()
         self.send_from = ""
-        self.send_to = ""
+        self.send_to = [""]
 
     def create_email_msg(self, subject_msg: str):
         if not self.recipient_email:
@@ -59,5 +59,4 @@ class EmailSender:
         smtp = smtplib.SMTP("127.0.0.1")
         smtp.sendmail(self.send_from, self.send_to, self.mime_msg.as_string())
         smtp.close()
-        print("Sending email finished")
-
+        logger.info("Sending email finished")
