@@ -2,4 +2,3 @@ pytest
 PyYAML
 flexmock
 click
-requests

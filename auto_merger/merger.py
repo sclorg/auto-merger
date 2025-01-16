@@ -27,6 +27,7 @@ import json
 import subprocess
 import os
 import shutil
+import logging
 
 from datetime import datetime, timedelta
 from typing import List
@@ -35,8 +36,10 @@ from pathlib import Path
 
 from auto_merger import utils
 from auto_merger.config import Config
-from auto_merger.utils import setup_logger, cwd
+from auto_merger.utils import cwd
 from auto_merger.email import EmailSender
+
+logger = logging.getLogger("auto-merger")
 
 
 class AutoMerger:
@@ -45,16 +48,12 @@ class AutoMerger:
     current_dir = os.getcwd()
 
     def __init__(self, config: Config):
-        self.logger = setup_logger("AutoMerger")
         self.config = config
         self.approval_labels = self.config.github["approval_labels"]
         self.blocking_labels = self.config.github["blocker_labels"]
         self.approvals = self.config.github["approvals"]
         self.namespace = self.config.github["namespace"]
         self.pr_lifetime = self.config.github["pr_lifetime"]
-        self.logger.debug(f"GitHub Labels: {self.approval_labels}")
-        self.logger.debug(f"Approvals Labels: {self.approvals}")
-        self.logger.debug(f"PR lifetime Labels: {self.pr_lifetime}")
         self.pr_to_merge = {}
         self.approval_body = []
         self.repo_data: List = []
@@ -63,7 +62,7 @@ class AutoMerger:
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
         repo_name = AutoMerger.get_gh_json_output(cmd=cmd)
-        self.logger.debug(repo_name)
+        logger.debug(repo_name)
         if repo_name["name"] == self.container_name:
             return True
         return False
@@ -86,14 +85,14 @@ class AutoMerger:
     def is_authenticated(self):
         token = os.getenv("GH_TOKEN")
         if token == "":
-            self.logger.error(f"Environment variable GH_TOKEN is not specified.")
+            logger.error(f"Environment variable GH_TOKEN is not specified.")
             return False
         cmd = [f"gh status"]
-        self.logger.debug(f"Authentication command: {cmd}")
+        logger.debug(f"Authentication command: {cmd}")
         try:
             return_output = utils.run_command(cmd=cmd, return_output=True)
         except subprocess.CalledProcessError as cpe:
-            self.logger.error(f"Authentication to GitHub failed. {cpe}")
+            logger.error(f"Authentication to GitHub failed. {cpe}")
             return False
         return True
 
@@ -106,19 +105,19 @@ class AutoMerger:
                 "createdAt": pr["createdAt"],
             }
         })
-        self.logger.debug(f"PR {pr['number']} added to approved")
+        logger.debug(f"PR {pr['number']} added to approved")
 
     def check_labels_to_merge(self, pr):
         if "labels" not in pr:
-            return True
+            return False
+        logger.debug(f"check_labels_to_merge for {self.container_name}: {pr['labels']} and {self.approval_labels}")
         for label in pr["labels"]:
             if label["name"] in self.approval_labels:
-                return False
-        self.logger.debug(f"Add '{pr['number']}' to approved PRs.")
-        return True
+                logger.debug(f"Add '{pr['number']}' to approved PRs.")
+                return True
+        return False
 
     def check_pr_approvals(self, reviews_to_check) -> int:
-        self.logger.debug(f"Approvals to check: {reviews_to_check}")
         if not reviews_to_check:
             return False
         approval_cnt = 0
@@ -126,7 +125,7 @@ class AutoMerger:
             if review["state"] == "APPROVED":
                 approval_cnt += 1
         if approval_cnt < self.approvals:
-            self.logger.debug(f"Not enough approvals: {approval_cnt}. Should be at least {self.approvals}")
+            logger.debug(f"Not enough approvals: {approval_cnt}. Should be at least {self.approvals}")
         return approval_cnt
 
     @staticmethod
@@ -165,12 +164,13 @@ class AutoMerger:
         if len(self.repo_data) == 0:
             return False
         for pr in self.repo_data:
-            if AutoMerger.is_draft(pr):
-                continue
-            self.logger.debug(f"PR status: {pr}")
             if not self.check_labels_to_merge(pr):
+                logger.debug(f"check_pr_to_merge for {self.container_name}: pull request {pr['number']} did not met labels.")
                 continue
             if "reviews" not in pr:
+                logger.debug(
+                    f"check_pr_to_merge for {self.container_name}:"
+                    f" pull request {pr['number']} does not have reviews yet.")
                 continue
             approval_count = self.check_pr_approvals(pr["reviews"])
             if not self.check_pr_lifetime(pr=pr):
@@ -209,12 +209,12 @@ class AutoMerger:
             if int(pr["approvals"]) < self.approvals:
                 continue
 
-            self.logger.info(f"Let's try to merge {pr['number']}....")
+            logger.info(f"Let's try to merge {pr['number']}....")
             try:
-                output = utils.run_command(f"gh pr merge {pr['number']}", return_output=True)
-                self.logger.debug(f"The output from merging command '{output}'")
+                output = utils.run_command(f"gh pr merge --rebase {pr['number']}", return_output=True)
+                logger.debug(f"The output from merging command '{output}'")
             except subprocess.CalledProcessError as cpe:
-                self.logger.error(f"Merging pr {pr} failed with reason {cpe.output}")
+                logger.error(f"Merging pr {pr} failed with reason {cpe.output}")
                 continue
 
     def check_all_containers(self) -> int:
@@ -229,7 +229,7 @@ class AutoMerger:
                 continue
             with cwd(self.container_dir) as _:
                 if not self.is_correct_repo():
-                    self.logger.error(f"This is not correct repo {self.container_name}.")
+                    logger.error(f"This is not correct repo {self.container_name}.")
                     continue
                 if self.container_name not in self.pr_to_merge:
                     self.pr_to_merge[self.container_name] = []
@@ -237,7 +237,7 @@ class AutoMerger:
                     self.get_gh_pr_list()
                     self.check_pr_to_merge()
                 except subprocess.CalledProcessError:
-                    self.logger.error(f"Something went wrong {self.container_name}.")
+                    logger.error(f"Something went wrong {self.container_name}.")
                     continue
         os.chdir(self.current_dir)
         return 0
@@ -249,6 +249,7 @@ class AutoMerger:
         to_approval: bool = False
         pr_body: List = []
         is_empty: bool = False
+        logger.info("SUMMARY")
         for container, pr_list in self.pr_to_merge.items():
             for pr in pr_list:
                 if not pr:
@@ -257,6 +258,7 @@ class AutoMerger:
                     continue
                 to_approval = True
                 result_pr = f"CAN BE MERGED"
+                logger.info(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} -> {result_pr}")
                 pr_body.append(
                     f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
                     f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
@@ -267,10 +269,9 @@ class AutoMerger:
                 self.approval_body.extend(pr_body)
                 self.approval_body.append("</table><br>")
                 is_empty = True
-        print('\n'.join(self.approval_body))
 
     def send_results(self, recipients):
-        self.logger.debug(f"Recipients are: {recipients}")
+        logger.debug(f"Recipients are: {recipients}")
         if not recipients:
             return 1
         sender_class = EmailSender(recipient_email=list(recipients))
@@ -278,4 +279,4 @@ class AutoMerger:
         if self.approval_body:
             sender_class.send_email(subject_msg, self.approval_body)
         else:
-            self.logger.info("Nothing to send.")
+            logger.info("Nothing to send.")

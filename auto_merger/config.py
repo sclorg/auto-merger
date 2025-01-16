@@ -22,31 +22,17 @@
 
 import logging
 import yaml
-import os
 import click
-import requests
 
 from yaml import safe_load
 
 from pathlib import Path
 from typing import Dict
 
-from urllib3.exceptions import InsecureRequestWarning
-
 from auto_merger.exceptions import AutoMergerConfigException, AutoMergerNetworkException
-requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 
-logger = logging.getLogger(__name__)
-
-
-class GlobalConfig(object):
-    def __init__(self, debug: bool = False, work_dir: Path = Path("/tmp/auto-merger")):
-        self.debug = debug
-        self.work_dir = work_dir
-
-
-pass_global_config = click.make_pass_decorator(GlobalConfig)
+logger = logging.getLogger("auto-merger")
 
 
 class Config:
@@ -83,37 +69,8 @@ class Config:
         logger.debug(str(config))
         return config
 
-    @classmethod
-    def get_user_config(cls, url: str):
-        config = cls.download_config(url=url)
-        return cls.get_from_dict(config)
-
-    @classmethod
-    def download_config(cls, url: str) -> Dict:
-        """
-        Loads Config from URL in raw format
-        :param url: URL to config file in raw format
-        :return:
-        """
-        # Requests have no file:// support
-        file_protocol = 'file://'
-        if url.startswith(file_protocol):
-            try:
-                with open(url[len(file_protocol):]) as f:
-                    return yaml.safe_load(f.read())
-            except IOError as error:
-                logger.error(error)
-                raise AutoMergerNetworkException
-        try:
-            result = requests.get(url, verify=False)
-            result.raise_for_status()
-            if result.status_code == 200:
-                return yaml.safe_load(result.text)
-        except requests.exceptions.MissingSchema as rms:
-            logger.error(rms)
-            raise AutoMergerNetworkException
-        return {}
-
     def __repr__(self):
         return f"Config(debug={self.debug}, github={self.github}, " \
                f"gitlab={self.gitlab})"
+
+pass_config = click.make_pass_decorator(Config)
