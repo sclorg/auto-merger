@@ -69,7 +69,7 @@ def get_config_miss_approval_and_lifetime():
 
 
 def test_config_equal(get_config_simple):
-    config = Config.get_from_dict(raw_dict=get_config_dict_simple)
+    config = Config.get_from_dict(raw_dict=get_config_dict_simple())
     assert config.debug == get_config_simple.debug
     assert config.github == get_config_simple.github
     assert config.gitlab == get_config_simple.gitlab
