@@ -75,7 +75,7 @@ def get_pr_missing_labels_one_approval():
 def get_config_dict_simple():
     return {
         "github": {
-            "namespace": "sclorg",
+            "namespace": "foobar",
             "repos": [
                 "repo1"
             ],
@@ -88,7 +88,7 @@ def get_config_dict_simple():
                 "pr/foobar1"
             ],
             # Labels that should be present in pull request before merging
-            "merge_labels": [
+            "approval_labels": [
                 "ok-to-merge"
             ]
         }
@@ -99,7 +99,7 @@ def get_config_dict_simple():
 def get_config_dict_miss_approval_lifetime():
     return {
         "github": {
-            "namespace": "sclorg",
+            "namespace": "foobar",
             "repos": [
                 "repo1"
             ],
@@ -108,17 +108,18 @@ def get_config_dict_miss_approval_lifetime():
                 "pr/foobar1"
             ],
             # Labels that should be present in pull request before merging
-            "merge_labels": [
+            "approval_labels": [
                 "ok-to-merge"
             ]
         }
     }
 
+
 @pytest.fixture()
 def default_config_merger():
     return {
         "github": {
-            "namespace": "sclorg",
+            "namespace": "foobar",
             "repos": [
                 "s2i-nodejs-container"
             ],

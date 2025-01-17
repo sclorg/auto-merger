@@ -31,34 +31,35 @@ def get_config_simple():
     config = Config()
     config.debug = True
     github_dict = {
-        "namespace": "sclorg",
+        "namespace": "foobar",
         "repos": ["repo1"],
         "approvals": 23,
         "pr_lifetime": 2,
         "blocker_labels": [
             "pr/foobar1",
         ],
-        "merge_labels": [
+        "approval_labels": [
             "ok-to-merge"
         ]
     }
     config.github = github_dict
     config.gitlab = None
     return config
+
 
 @pytest.fixture()
 def get_config_miss_approval_and_lifetime():
     config = Config()
     config.debug = True
     github_dict = {
-        "namespace": "sclorg",
+        "namespace": "foobar",
         "repos": ["repo1"],
         "approvals": 2,
         "pr_lifetime": 1,
         "blocker_labels": [
             "pr/foobar1",
         ],
-        "merge_labels": [
+        "approval_labels": [
             "ok-to-merge"
         ]
     }
@@ -67,7 +68,7 @@ def get_config_miss_approval_and_lifetime():
     return config
 
 
-def test_config_equal(get_config_dict_simple, get_config_simple):
+def test_config_equal(get_config_simple):
     config = Config.get_from_dict(raw_dict=get_config_dict_simple)
     assert config.debug == get_config_simple.debug
     assert config.github == get_config_simple.github

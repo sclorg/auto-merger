@@ -30,9 +30,8 @@ import shutil
 import logging
 
 from datetime import datetime, timedelta
-from typing import List
 from pathlib import Path
-
+from typing import Dict, List
 
 from auto_merger import utils
 from auto_merger.config import Config
@@ -55,7 +54,7 @@ class AutoMerger:
         self.approvals = self.config.github["approvals"]
         self.namespace = self.config.github["namespace"]
         self.pr_lifetime = self.config.github["pr_lifetime"]
-        self.pr_to_merge: dict = {}
+        self.pr_to_merge: Dict = {}
         self.approval_body: List = []
         self.repo_data: List = []
         self.temp_dir = ""
@@ -139,7 +138,9 @@ class AutoMerger:
                 return True
         return False
 
-    def check_pr_lifetime(self, pr: dict) -> bool:
+    def check_pr_lifetime(self, pr=None) -> bool:
+        if pr is None:
+            return False
         if self.pr_lifetime == 0:
             return True
         if "createdAt" not in pr:
@@ -243,7 +244,7 @@ class AutoMerger:
                         f"in organization {self.namespace}")
             return 0
         to_approval: bool = False
-        pr_body: List = []
+        pr_body: list[str] = []
         logger.info("SUMMARY")
         for container, pr_list in self.pr_to_merge.items():
             for pr in pr_list:
