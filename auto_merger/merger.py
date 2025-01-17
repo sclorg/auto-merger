@@ -82,7 +82,7 @@ class AutoMerger:
                 continue
             self.repo_data.append(pr)
 
-    def is_authenticated(self):
+    def is_authenticated(self) -> bool:
         token = os.getenv("GH_TOKEN")
         if token == "":
             logger.error("Environment variable GH_TOKEN is not specified.")
@@ -96,7 +96,7 @@ class AutoMerger:
             return False
         return True
 
-    def check_labels_to_merge(self, pr):
+    def check_labels_to_merge(self, pr) -> bool:
         if "labels" not in pr:
             return False
         logger.debug(f"check_labels_to_merge for {self.container_name}: {pr['labels']} and {self.approval_labels}")
@@ -212,9 +212,9 @@ class AutoMerger:
                 logger.error(f"Merging pr {pr} failed with reason {cpe.output}")
                 continue
 
-    def check_all_containers(self) -> int:
+    def check_all_containers(self) -> bool:
         if not self.is_authenticated():
-            return 1
+            return False
         self.temp_dir = utils.temporary_dir()
         for container in self.config.github["repos"]:
             self.container_name = container
@@ -235,14 +235,14 @@ class AutoMerger:
                     logger.error(f"Something went wrong {self.container_name}.")
                     continue
         os.chdir(self.current_dir)
-        return 0
+        return True
 
     def print_pull_request_to_merge(self):
         # Do not print anything in case we do not have PR.
         if not [x for x in self.pr_to_merge if self.pr_to_merge[x]]:
             logger.info(f"Nothing to be merged in repos {self.config.github['repos']} "
                         f"in organization {self.namespace}")
-            return 0
+            return
         to_approval: bool = False
         pr_body: list[str] = []
         logger.info("SUMMARY")
@@ -274,7 +274,7 @@ class AutoMerger:
     def send_results(self, recipients):
         logger.debug(f"Recipients are: {recipients}")
         if not recipients:
-            return 1
+            return False
         sender_class = EmailSender(recipient_email=list(recipients))
         subject_msg = f"Pull request statuses for organization https://github.com/{self.namespace}"
         if self.approval_body:
