@@ -29,7 +29,7 @@ import os
 import shutil
 import logging
 
-from typing import Any, Dict, List
+from typing import Any
 from pathlib import Path
 
 from auto_merger import utils
@@ -50,11 +50,11 @@ class PRStatusChecker:
         self.blocking_labels = self.config.github["blocker_labels"]
         self.approvals = self.config.github["approvals"]
         self.namespace = self.config.github["namespace"]
-        self.blocked_pr: Dict = {}
-        self.pr_to_merge: Dict = {}
-        self.blocked_body: List = []
-        self.approval_body: List = []
-        self.repo_data: List = []
+        self.blocked_pr: dict = {}
+        self.pr_to_merge: dict = {}
+        self.blocked_body: list = []
+        self.approval_body: list = []
+        self.repo_data: list = []
 
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
@@ -113,13 +113,15 @@ class PRStatusChecker:
                 present = True
         if present:
             return
-        self.blocked_pr[self.container_name].append({
-            "number": pull_request["number"],
-            "pr_dict": {
-                "title": pull_request["title"],
-                "labels": pull_request["labels"]
+        self.blocked_pr[self.container_name].append(
+            {
+                "number": pull_request["number"],
+                "pr_dict": {
+                    "title": pull_request["title"],
+                    "labels": pull_request["labels"],
+                },
             }
-        })
+        )
         logger.debug(f"PR {pull_request['number']} added to blocked")
         return
 
@@ -208,9 +210,7 @@ class PRStatusChecker:
             self.pr_to_merge[self.container_name] = {
                 "number": pr["number"],
                 "approvals": approval_count,
-                "pr_dict": {
-                    "title": pr["title"]
-                }
+                "pr_dict": {"title": pr["title"]},
             }
             pr_to_merge = True
         return pr_to_merge
@@ -270,9 +270,7 @@ class PRStatusChecker:
         # Do not print anything in case we do not have PR.
         if not [x for x in self.blocked_pr if self.blocked_pr[x]]:
             return
-        logger.info(
-            f"SUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>"
-        )
+        logger.info(f"SUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>")
         self.blocked_body.append(
             f"Pull requests that are blocked by labels <b>[{', '.join(self.blocking_labels)}]</b><br><br>"
         )
@@ -282,9 +280,7 @@ class PRStatusChecker:
                 continue
             logger.info(f"\n{container}\n------\n")
             self.blocked_body.append(f"<b>{container}<b>:")
-            self.blocked_body.append(
-                "<table><tr><th>Pull request URL</th><th>Title</th><th>Missing labels</th></tr>"
-            )
+            self.blocked_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Missing labels</th></tr>")
             for pr in pull_requests:
                 blocked_labels = self.get_blocked_labels(pr["pr_dict"])
                 logger.info(

@@ -37,9 +37,7 @@ def get_config_simple():
         "blocker_labels": [
             "pr/foobar1",
         ],
-        "approval_labels": [
-            "ok-to-merge"
-        ]
+        "approval_labels": ["ok-to-merge"],
     }
     config.github = github_dict
     config.gitlab = None
@@ -58,9 +56,7 @@ def get_config_miss_approval_and_lifetime():
         "blocker_labels": [
             "pr/foobar1",
         ],
-        "approval_labels": [
-            "ok-to-merge"
-        ]
+        "approval_labels": ["ok-to-merge"],
     }
     config.github = github_dict
     config.gitlab = None

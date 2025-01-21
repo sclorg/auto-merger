@@ -12,12 +12,10 @@ from auto_merger.merger import AutoMerger
 yaml_merger = {
     "github": {
         "namespace": "sclorg",
-        "repos": [
-            "s2i-nodejs-container"
-        ],
-        "blocker_labels": ["pr/missing-review", 'pr/failing-ci'],
+        "repos": ["s2i-nodejs-container"],
+        "blocker_labels": ["pr/missing-review", "pr/failing-ci"],
         "approval_labels": ["READY-to-MERGE"],
-        "pr_lifetime": 1
+        "pr_lifetime": 1,
     }
 }
 
@@ -25,14 +23,14 @@ yaml_merger = {
 @pytest.mark.parametrize(
     "pr_created_date,pr_lifetime,return_code",
     (
-            ("2024-12-20T09:30:11Z", 1, False),
-            ("2024-12-19T07:30:11Z", 1, True),
-            ("2024-12-21T09:30:11Z", 1, False),
-            ("2024-12-21T09:30:11Z", 0, True),
-    )
+        ("2024-12-20T09:30:11Z", 1, False),
+        ("2024-12-19T07:30:11Z", 1, True),
+        ("2024-12-21T09:30:11Z", 1, False),
+        ("2024-12-21T09:30:11Z", 0, True),
+    ),
 )
 def test_get_gh_pr_list(pr_created_date, pr_lifetime, return_code):
-    set_time = datetime.strptime("2024-12-20T10:35:20Z", '%Y-%m-%dT%H:%M:%SZ')
+    set_time = datetime.strptime("2024-12-20T10:35:20Z", "%Y-%m-%dT%H:%M:%SZ")
     flexmock(AutoMerger).should_receive("get_realtime").and_return(set_time)
     test_config = Config()
     auto_merger = AutoMerger(config=test_config.get_from_dict(yaml_merger))

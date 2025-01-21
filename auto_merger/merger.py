@@ -31,7 +31,6 @@ import logging
 
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List
 
 from auto_merger import utils
 from auto_merger.config import Config
@@ -54,9 +53,9 @@ class AutoMerger:
         self.approvals = self.config.github["approvals"]
         self.namespace = self.config.github["namespace"]
         self.pr_lifetime = self.config.github["pr_lifetime"]
-        self.pr_to_merge: Dict = {}
-        self.approval_body: List = []
-        self.repo_data: List = []
+        self.pr_to_merge: dict = {}
+        self.approval_body: list = []
+        self.repo_data: list = []
         self.temp_dir = ""
 
     def is_correct_repo(self) -> bool:
@@ -129,6 +128,7 @@ class AutoMerger:
     @staticmethod
     def get_realtime():
         from datetime import datetime
+
         return datetime.now()
 
     @staticmethod
@@ -157,25 +157,27 @@ class AutoMerger:
         for pr in self.repo_data:
             if not self.check_labels_to_merge(pr):
                 logger.debug(
-                    f"check_pr_to_merge for {self.container_name}: "
-                    f"pull request {pr['number']} did not met labels."
+                    f"check_pr_to_merge for {self.container_name}: " f"pull request {pr['number']} did not met labels."
                 )
                 continue
             if "reviews" not in pr:
                 logger.debug(
                     f"check_pr_to_merge for {self.container_name}:"
-                    f" pull request {pr['number']} does not have reviews yet.")
+                    f" pull request {pr['number']} does not have reviews yet."
+                )
                 continue
             approval_count = self.check_pr_approvals(pr["reviews"])
             if not self.check_pr_lifetime(pr=pr):
                 continue
-            self.pr_to_merge[self.container_name].append({
-                "number": pr["number"],
-                "approvals": approval_count,
-                "pr_dict": {
-                    "title": pr["title"],
+            self.pr_to_merge[self.container_name].append(
+                {
+                    "number": pr["number"],
+                    "approvals": approval_count,
+                    "pr_dict": {
+                        "title": pr["title"],
+                    },
                 }
-            })
+            )
         return True
 
     def clone_repo(self):
@@ -240,8 +242,9 @@ class AutoMerger:
     def print_pull_request_to_merge(self):
         # Do not print anything in case we do not have PR.
         if not [x for x in self.pr_to_merge if self.pr_to_merge[x]]:
-            logger.info(f"Nothing to be merged in repos {self.config.github['repos']} "
-                        f"in organization {self.namespace}")
+            logger.info(
+                f"Nothing to be merged in repos {self.config.github['repos']} " f"in organization {self.namespace}"
+            )
             return
         to_approval: bool = False
         pr_body: list[str] = []
@@ -267,9 +270,7 @@ class AutoMerger:
                 self.approval_body.extend(pr_body)
                 self.approval_body.append("</table><br>")
         if not to_approval:
-            logger.info(
-                f"Nothing to be merged in repos {self.config.github['repos']} in organization {self.namespace}"
-            )
+            logger.info(f"Nothing to be merged in repos {self.config.github['repos']} in organization {self.namespace}")
 
     def send_results(self, recipients):
         logger.debug(f"Recipients are: {recipients}")

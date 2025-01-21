@@ -21,26 +21,23 @@
 # SOFTWARE.
 
 import logging
-import yaml
 import click
 
 from yaml import safe_load
 
 from pathlib import Path
-from typing import Dict
 
-from auto_merger.exceptions import AutoMergerConfigException, AutoMergerNetworkException
+from auto_merger.exceptions import AutoMergerConfigException
 
 
 logger = logging.getLogger("auto-merger")
 
 
 class Config:
-
     def __init__(self):
         self.debug: bool = True
-        self.github: Dict = {}
-        self.gitlab: Dict = {}
+        self.github: dict = {}
+        self.gitlab: dict = {}
 
     @classmethod
     def get_default_config(cls) -> "Config":
@@ -70,7 +67,7 @@ class Config:
         return config
 
     def __repr__(self):
-        return f"Config(debug={self.debug}, github={self.github}, " \
-               f"gitlab={self.gitlab})"
+        return f"Config(debug={self.debug}, github={self.github}, " f"gitlab={self.gitlab})"
+
 
 pass_config = click.make_pass_decorator(Config)

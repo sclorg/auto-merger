@@ -76,21 +76,15 @@ def get_config_dict_simple():
     return {
         "github": {
             "namespace": "foobar",
-            "repos": [
-                "repo1"
-            ],
+            "repos": ["repo1"],
             # How many approvals should have PR
             "approvals": 23,
             # How many days, PR should be opened
             "pr_lifetime": 2,
             # Labels that blockes merges
-            "blocker_labels": [
-                "pr/foobar1"
-            ],
+            "blocker_labels": ["pr/foobar1"],
             # Labels that should be present in pull request before merging
-            "approval_labels": [
-                "ok-to-merge"
-            ]
+            "approval_labels": ["ok-to-merge"],
         }
     }
 
@@ -100,17 +94,11 @@ def get_config_dict_miss_approval_lifetime():
     return {
         "github": {
             "namespace": "foobar",
-            "repos": [
-                "repo1"
-            ],
+            "repos": ["repo1"],
             # Labels that blockes merges
-            "blocker_labels": [
-                "pr/foobar1"
-            ],
+            "blocker_labels": ["pr/foobar1"],
             # Labels that should be present in pull request before merging
-            "approval_labels": [
-                "ok-to-merge"
-            ]
+            "approval_labels": ["ok-to-merge"],
         }
     }
 
@@ -120,10 +108,8 @@ def default_config_merger():
     return {
         "github": {
             "namespace": "foobar",
-            "repos": [
-                "s2i-nodejs-container"
-            ],
-            "blocker_labels": ["pr/missing-review", 'pr/failing-ci'],
-            "approval_labels": ["READY-to-MERGE"]
+            "repos": ["s2i-nodejs-container"],
+            "blocker_labels": ["pr/missing-review", "pr/failing-ci"],
+            "approval_labels": ["READY-to-MERGE"],
         }
     }

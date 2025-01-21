@@ -22,8 +22,6 @@
 
 import logging
 
-from typing import List
-
 from auto_merger.pr_checker import PRStatusChecker
 from auto_merger.config import Config
 from auto_merger.merger import AutoMerger
@@ -31,7 +29,7 @@ from auto_merger.merger import AutoMerger
 logger = logging.getLogger(__name__)
 
 
-def pull_request_checker(config: Config, send_email: List[str]) -> int:
+def pull_request_checker(config: Config, send_email: list[str] | None) -> int:
     """
     Checks NVR from brew build against pulp
     """
@@ -48,7 +46,7 @@ def pull_request_checker(config: Config, send_email: List[str]) -> int:
     return ret_value
 
 
-def merger(config: Config, send_email: List[str]) -> int:
+def merger(config: Config, send_email: list[str] | None) -> int:
     logger.debug(f"Configuration: {config.__str__()}")
     auto_merger = AutoMerger(config=config)
     ret_value = auto_merger.check_all_containers()

@@ -15,9 +15,7 @@ def test_get_gh_pr_correct_repo(get_repo_name, default_config_merger):
 
 
 def test_get_gh_pr_wrong_repo(get_repo_wrong_name, default_config_merger):
-    flexmock(PRStatusChecker).should_receive("get_gh_json_output").and_return(
-        get_repo_wrong_name
-    )
+    flexmock(PRStatusChecker).should_receive("get_gh_json_output").and_return(get_repo_wrong_name)
     test_config = Config()
     auto_merger = PRStatusChecker(config=test_config.get_from_dict(default_config_merger))
     auto_merger.container_name = "s2i-nodejs-container"

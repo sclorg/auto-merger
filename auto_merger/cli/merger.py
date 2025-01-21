@@ -31,11 +31,14 @@ from auto_merger import api
 
 logger = logging.getLogger(__name__)
 
+
 @click.command("merger")
-@click.option("--send-email", multiple=True, help="Specify email addresses to which the mail will be sent.")
+@click.option(
+    "--send-email",
+    multiple=True,
+    help="Specify email addresses to which the mail will be sent.",
+)
 @pass_config
 def merger(config, send_email):
-
     ret_value = api.merger(config=config, send_email=send_email)
     sys.exit(ret_value)
-
