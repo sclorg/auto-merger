@@ -260,7 +260,7 @@ class PRStatusChecker:
             self.clean_dirs()
         return True
 
-    def get_blocked_labels(self, pr_dict) -> List[str]:
+    def get_blocked_labels(self, pr_dict) -> list[str]:
         labels = []
         for lbl in pr_dict["labels"]:
             labels.append(lbl["name"])
