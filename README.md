@@ -82,7 +82,7 @@ the email service is configured, then the results are send to corresponding emai
 
 # Automatic pull request merger
 
-This option is used for analyation pull request in the specific namespace and repositories mentioned
+This option is used for analyzation pull request in the specific namespace and repositories mentioned
 in configuration file. At the end `auto-merger` provides the output into command line.
 
 ```bash
