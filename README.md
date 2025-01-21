@@ -82,12 +82,12 @@ the email service is configured, then the results are send to corresponding emai
 
 # Automatic pull request merger
 
-This option is used for analysation pull request in the specific namespace and repositories mentioned
+This option is used for analyzation pull request in the specific namespace and repositories mentioned
 in configuration file. At the end `auto-merger` provides the output into command line.
 
 ```bash
-$ auto-merger pr-checker --help
-Usage: auto-merger pr-checker [OPTIONS]
+$ auto-merger merger --help
+Usage: auto-merger merger [OPTIONS]
 
 Options:
   --send-email TEXT  Specify email addresses to which the mail will be sent.
@@ -95,23 +95,12 @@ Options:
 
 ```
 
-The real output from `auto-merger pr-checker` could be:
+The real output from `auto-merger merger` could be:
 ```bash
-s2i-ruby-container
-------
+SUMMARY
+https://github.com/sclorg/mariadb-container/pull/262 -> CAN BE MERGED
+Let's try to merge 262....
 
-https://github.com/sclorg/s2i-ruby-container/pull/570 pr/missing-review pr/failing-ci
-https://github.com/sclorg/s2i-ruby-container/pull/569 dependencies ruby pr/missing-review
-
-s2i-nodejs-container
-------
-
-https://github.com/sclorg/s2i-nodejs-container/pull/463 pr/missing-review pr/failing-ci
-https://github.com/sclorg/s2i-nodejs-container/pull/236 pr/missing-review
-
-
-Pull requests that can be merged or missing 2 approvals
-https://github.com/sclorg/s2i-python-container/pull/574 - Missing 2 APPROVAL
 ```
 
 In case user specifies `--send-email`, multipletimes, and the system where is auto-merger running

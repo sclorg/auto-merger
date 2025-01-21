@@ -23,7 +23,6 @@
 import pytest
 
 from auto_merger.config import Config
-from tests.conftest import get_config_dict_simple
 
 
 @pytest.fixture()
@@ -31,36 +30,33 @@ def get_config_simple():
     config = Config()
     config.debug = True
     github_dict = {
-        "namespace": "sclorg",
+        "namespace": "foobar",
         "repos": ["repo1"],
         "approvals": 23,
         "pr_lifetime": 2,
         "blocker_labels": [
             "pr/foobar1",
         ],
-        "merge_labels": [
-            "ok-to-merge"
-        ]
+        "approval_labels": ["ok-to-merge"],
     }
     config.github = github_dict
     config.gitlab = None
     return config
+
 
 @pytest.fixture()
 def get_config_miss_approval_and_lifetime():
     config = Config()
     config.debug = True
     github_dict = {
-        "namespace": "sclorg",
+        "namespace": "foobar",
         "repos": ["repo1"],
         "approvals": 2,
         "pr_lifetime": 1,
         "blocker_labels": [
             "pr/foobar1",
         ],
-        "merge_labels": [
-            "ok-to-merge"
-        ]
+        "approval_labels": ["ok-to-merge"],
     }
     config.github = github_dict
     config.gitlab = None

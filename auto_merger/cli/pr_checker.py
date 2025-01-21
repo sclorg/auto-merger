@@ -32,9 +32,12 @@ logger = logging.getLogger("auto-merger")
 
 
 @click.command("pr-checker")
-@click.option("--send-email", multiple=True, help="Specify email addresses to which the mail will be sent.")
+@click.option(
+    "--send-email",
+    multiple=True,
+    help="Specify email addresses to which the mail will be sent.",
+)
 @pass_config
 def pr_checker(config, send_email):
     ret_value = api.pull_request_checker(config=config, send_email=send_email)
     sys.exit(ret_value)
-

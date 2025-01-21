@@ -29,14 +29,14 @@ import os
 import shutil
 import logging
 
-from typing import List
+from typing import Any
 from pathlib import Path
 
 from auto_merger import utils
 from auto_merger.email import EmailSender
 from auto_merger.config import Config
 
-logger = logging.getLogger("auto-merger")
+logger = logging.getLogger(__name__)
 
 
 class PRStatusChecker:
@@ -50,14 +50,11 @@ class PRStatusChecker:
         self.blocking_labels = self.config.github["blocker_labels"]
         self.approvals = self.config.github["approvals"]
         self.namespace = self.config.github["namespace"]
-        logger.debug(f"GitHub Labels: {self.approval_labels}")
-        logger.debug(f"GitHub Blocking Labels: {self.blocking_labels}")
-        logger.debug(f"Approvals Labels: {self.approvals}")
-        self.blocked_pr = {}
-        self.pr_to_merge = {}
-        self.blocked_body = []
-        self.approval_body = []
-        self.repo_data: List = []
+        self.blocked_pr: dict = {}
+        self.pr_to_merge: dict = {}
+        self.blocked_body: list = []
+        self.approval_body: list = []
+        self.repo_data: list = []
 
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
@@ -82,68 +79,85 @@ class PRStatusChecker:
                 continue
             self.repo_data.append(pr)
 
-    def is_authenticated(self):
+    def is_authenticated(self) -> bool:
+        """
+        Function check if user is authenticated
+        :return: True if user is authenticated
+                 False user is not authenticated
+        """
         token = os.getenv("GH_TOKEN")
         if token == "":
-            logger.error(f"Environment variable GH_TOKEN is not specified.")
+            logger.error("Environment variable GH_TOKEN is not specified.")
             return False
-        cmd = [f"gh status"]
+        cmd = ["gh status"]
         logger.debug(f"Authentication command: {cmd}")
         try:
-            return_output = utils.run_command(cmd=cmd, return_output=True)
+            utils.run_command(cmd=cmd, return_output=True)
         except subprocess.CalledProcessError as cpe:
             logger.error(f"Authentication to GitHub failed. {cpe}")
             return False
         return True
 
-    def add_blocked_pr(self, pr: {}):
+    def add_blocked_pull_request(self, pull_request=None) -> Any:
+        """
+        Function adds pull request to self.blocked_pr dictionary with
+        specific fields like 'number' and 'pr_dict': {'title': , 'labels': }
+        :param pull_request: Dictionary with pull request structure
+        :return:
+        """
+        if pull_request is None:
+            pull_request = {}
         present = False
         for stored_pr in self.blocked_pr[self.container_name]:
-            if int(stored_pr["number"]) == int(pr["number"]):
+            if int(stored_pr["number"]) == int(pull_request["number"]):
                 present = True
         if present:
             return
-        self.blocked_pr[self.container_name].append({
-            "number": pr["number"],
-            "pr_dict": {
-                "title": pr["title"],
-                "labels": pr["labels"]
+        self.blocked_pr[self.container_name].append(
+            {
+                "number": pull_request["number"],
+                "pr_dict": {
+                    "title": pull_request["title"],
+                    "labels": pull_request["labels"],
+                },
             }
-        })
-        logger.debug(f"PR {pr['number']} added to blocked")
-
-    def add_approved_pr(self, pr: {}):
-        self.pr_to_merge[self.container_name].append({
-            "number": pr["number"],
-            "pr_dict": {
-                "title": pr["title"],
-                "labels": pr["labels"]
-            }
-        })
-        logger.debug(f"PR {pr['number']} added to approved")
+        )
+        logger.debug(f"PR {pull_request['number']} added to blocked")
+        return
 
     def check_blocked_labels(self):
         for pr in self.repo_data:
-            logger.info(f"Let's check PR {pr['number']}")
-            logger.debug(f"Check blocked: {pr}")
+            logger.info(f"- Checking PR {pr['number']}")
             if "labels" not in pr:
                 continue
             for label in pr["labels"]:
                 if label["name"] not in self.blocking_labels:
                     continue
-                logger.debug(f"Add '{pr['number']}' to blocked PRs.")
-                self.add_blocked_pr(pr)
+                logger.info(f"Add PR'{pr['number']}' to blocked PRs.")
+                self.add_blocked_pull_request(pull_request=pr)
 
-    def check_labels_to_merge(self, pr):
+    def check_labels_to_merge(self, pr) -> bool:
+        """
+        Function checks labels for each pull request
+        'label' is compared against configuration file 'github': 'blocking_labels'
+        :param pr: pull request dictionary with labels
+        :return: False is labels are not present or 'label' is int 'blocking_labels'
+                 True pull request is approved. No blocking issue
+        """
         if "labels" not in pr:
-            return True
+            return False
         for label in pr["labels"]:
             if label["name"] in self.blocking_labels:
                 return False
         logger.debug(f"Add '{pr['number']}' to approved PRs.")
         return True
 
-    def check_pr_approvals(self, reviews_to_check) -> int:
+    def check_pr_approvals(self, reviews_to_check: dict = None) -> int:
+        """
+        Function checks if PR has enough approvals
+        :param reviews_to_check: List of review to check for specific pull request
+        :return: Number of approvals
+        """
         logger.debug(f"Approvals to check: {reviews_to_check}")
         if not reviews_to_check:
             return False
@@ -155,7 +169,13 @@ class PRStatusChecker:
             logger.debug(f"Approval count: {approval_cnt}")
         return approval_cnt
 
-    def is_changes_requested(self, pr):
+    def is_changes_requested(self, pr) -> bool:
+        """
+        Function checks if pull request is marked as 'changes request'
+        :param pr: dictionary with pull reqyest
+        :return: True if changes are requested
+                 False if changes are not requested
+        """
         if "labels" not in pr:
             return False
         for labels in pr["labels"]:
@@ -164,7 +184,13 @@ class PRStatusChecker:
         return False
 
     @staticmethod
-    def is_draft(pull_request):
+    def is_draft(pull_request) -> bool:
+        """
+        Function returns if pull request is draft or not.
+        :param pull_request: Pull request with field 'isDraft'
+        :return:    True for draft
+                    False not draft
+        """
         if "isDraft" in pull_request:
             if pull_request["isDraft"] in ["True", "true"]:
                 return True
@@ -173,9 +199,8 @@ class PRStatusChecker:
     def check_pr_to_merge(self) -> bool:
         if len(self.repo_data) == 0:
             return False
+        pr_to_merge: bool = False
         for pr in self.repo_data:
-            if PRStatusChecker.is_draft(pr):
-                continue
             logger.debug(f"PR status: {pr}")
             if not self.check_labels_to_merge(pr):
                 continue
@@ -185,10 +210,10 @@ class PRStatusChecker:
             self.pr_to_merge[self.container_name] = {
                 "number": pr["number"],
                 "approvals": approval_count,
-                "pr_dict": {
-                    "title": pr["title"]
-                }
+                "pr_dict": {"title": pr["title"]},
             }
+            pr_to_merge = True
+        return pr_to_merge
 
     def clone_repo(self):
         temp_dir = utils.temporary_dir()
@@ -208,11 +233,11 @@ class PRStatusChecker:
         if self.container_dir.exists():
             shutil.rmtree(self.container_dir)
 
-    def check_all_containers(self) -> int:
+    def check_all_containers(self) -> bool:
         if not self.is_authenticated():
-            return 1
+            return False
         for container in self.config.github["repos"]:
-            logger.info(f"Let's check container {container}")
+            logger.info(f"Let's check repository in {self.namespace}/{container}")
             self.container_name = container
             self.repo_data = []
             self.clone_repo()
@@ -227,19 +252,15 @@ class PRStatusChecker:
             try:
                 self.get_gh_pr_list()
                 self.check_blocked_labels()
-                if len(self.blocked_pr[self.container_name]) != 0:
-                    logger.info(
-                        f"This pull request can not be merged {self.pr_to_merge}"
-                    )
                 self.check_pr_to_merge()
             except subprocess.CalledProcessError:
                 self.clean_dirs()
                 logger.error(f"Something went wrong {self.container_name}.")
                 continue
             self.clean_dirs()
-        return 0
+        return True
 
-    def get_blocked_labels(self, pr_dict) -> List [str]:
+    def get_blocked_labels(self, pr_dict) -> list[str]:
         labels = []
         for lbl in pr_dict["labels"]:
             labels.append(lbl["name"])
@@ -248,8 +269,8 @@ class PRStatusChecker:
     def print_blocked_pull_request(self):
         # Do not print anything in case we do not have PR.
         if not [x for x in self.blocked_pr if self.blocked_pr[x]]:
-            return 0
-        print(f"\n\nSUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>")
+            return
+        logger.info(f"SUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>")
         self.blocked_body.append(
             f"Pull requests that are blocked by labels <b>[{', '.join(self.blocking_labels)}]</b><br><br>"
         )
@@ -257,33 +278,36 @@ class PRStatusChecker:
         for container, pull_requests in self.blocked_pr.items():
             if not pull_requests:
                 continue
-            print(f"\n{container}\n------\n")
+            logger.info(f"\n{container}\n------\n")
             self.blocked_body.append(f"<b>{container}<b>:")
             self.blocked_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Missing labels</th></tr>")
             for pr in pull_requests:
                 blocked_labels = self.get_blocked_labels(pr["pr_dict"])
-                print(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} {' '.join(blocked_labels)}")
+                logger.info(
+                    f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} {' '.join(blocked_labels)}"
+                )
                 self.blocked_body.append(
                     f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
-                    f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{' '.join(blocked_labels)}</p></td></tr>"
+                    f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>"
+                    f"{' '.join(blocked_labels)}</p></td></tr>"
                 )
             self.blocked_body.append("</table><br><br>")
 
     def print_approval_pull_request(self):
         # Do not print anything in case we do not have PR.
         if not [x for x in self.pr_to_merge if self.pr_to_merge[x]]:
-            return 0
-        print(f"\n\nSUMMARY\n\nPull requests that can be merged approvals")
+            return
+        logger.info("SUMMARY\n\nPull requests that can be merged approvals")
         self.approval_body.append(f"Pull requests that can be merged or missing {self.approvals} approvals")
         self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
         for container, pr in self.pr_to_merge.items():
             if not pr:
                 continue
             if int(pr["approvals"]) >= self.approvals:
-                result_pr = f"CAN BE MERGED"
+                result_pr = "CAN BE MERGED"
             else:
                 result_pr = f"Missing {self.approvals-int(pr['approvals'])} APPROVAL"
-            print(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} - {result_pr}")
+            logger.info(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} - {result_pr}")
             self.approval_body.append(
                 f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
                 f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
@@ -291,9 +315,9 @@ class PRStatusChecker:
         self.approval_body.append("</table><br>")
 
     def send_results(self, recipients):
-        logger.debug(f"Recepients are: {recipients}")
+        logger.debug(f"Recipients are: {recipients}")
         if not recipients:
-            return 1
+            return
         sender_class = EmailSender(recipient_email=list(recipients))
         subject_msg = f"Pull request statuses for organization https://github.com/{self.namespace}"
         sender_class.send_email(subject_msg, self.blocked_body + self.approval_body)

@@ -23,20 +23,20 @@
 import smtplib
 import logging
 
-from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import List
 
 logger = logging.getLogger(__name__)
 
-class EmailSender:
 
-    def __init__(self, recipient_email: List[str] = None):
+class EmailSender:
+    def __init__(self, recipient_email=None):
+        if recipient_email is None:
+            recipient_email = []
         self.recipient_email = recipient_email
         self.mime_msg = MIMEMultipart()
         self.send_from = ""
-        self.send_to = ""
+        self.send_to = [""]
 
     def create_email_msg(self, subject_msg: str):
         if not self.recipient_email:
@@ -50,14 +50,17 @@ class EmailSender:
         self.mime_msg["To"] = ", ".join(self.send_to)
         self.mime_msg["Subject"] = subject_msg
 
-    def send_email(self, subject_msg, body: List[str] = None):
+    def send_email(self, subject_msg, body=None):
+        if body is None:
+            body = []
         whole_body = "".join(body)
-        msg = ("<html><head><style>table, th, td {border: 1px solid black;}</style></head>"
-               f"<body>{whole_body}</body></html>")
+        msg = (
+            "<html><head><style>table, th, td {border: 1px solid black;}</style></head>"
+            f"<body>{whole_body}</body></html>"
+        )
         self.create_email_msg(subject_msg)
         self.mime_msg.attach(MIMEText(msg, "html"))
         smtp = smtplib.SMTP("127.0.0.1")
         smtp.sendmail(self.send_from, self.send_to, self.mime_msg.as_string())
         smtp.close()
-        print("Sending email finished")
-
+        logger.info("Sending email finished")
