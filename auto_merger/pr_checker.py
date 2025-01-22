@@ -55,6 +55,7 @@ class PRStatusChecker:
         self.blocked_body: list = []
         self.approval_body: list = []
         self.repo_data: list = []
+        self.temp_dir: Path
 
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
@@ -216,11 +217,11 @@ class PRStatusChecker:
         return pr_to_merge
 
     def clone_repo(self):
-        temp_dir = utils.temporary_dir()
+        self.temp_dir = utils.temporary_dir()
+        self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
         utils.run_command(
-            f"gh repo clone https://github.com/{self.namespace}/{self.container_name} {temp_dir}/{self.container_name}"
+            f"gh repo clone https://github.com/{self.namespace}/{self.container_name} {self.container_dir}"
         )
-        self.container_dir = Path(temp_dir) / f"{self.container_name}"
         if self.container_dir.exists():
             os.chdir(self.container_dir)
 
@@ -232,6 +233,8 @@ class PRStatusChecker:
         os.chdir(self.current_dir)
         if self.container_dir.exists():
             shutil.rmtree(self.container_dir)
+        if Path(self.temp_dir).exists():
+            shutil.rmtree(self.temp_dir)
 
     def check_all_containers(self) -> bool:
         if not self.is_authenticated():

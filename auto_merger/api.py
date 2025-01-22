@@ -36,13 +36,15 @@ def pull_request_checker(config: Config, send_email: list[str] | None) -> int:
     logger.debug(f"Configuration: {config.__str__()}")
     pr_status_checker = PRStatusChecker(config=config)
     ret_value = pr_status_checker.check_all_containers()
-    if ret_value != 0:
+    if not ret_value:
+        pr_status_checker.clean_dirs()
         return ret_value
     pr_status_checker.print_blocked_pull_request()
     pr_status_checker.print_approval_pull_request()
     if send_email:
         if not pr_status_checker.send_results(send_email):
             return 1
+    pr_status_checker.clean_dirs()
     return ret_value
 
 
@@ -50,11 +52,13 @@ def merger(config: Config, send_email: list[str] | None) -> int:
     logger.debug(f"Configuration: {config.__str__()}")
     auto_merger = AutoMerger(config=config)
     ret_value = auto_merger.check_all_containers()
-    if ret_value != 0:
+    if not ret_value:
+        auto_merger.clean_dirs()
         return ret_value
     auto_merger.print_pull_request_to_merge()
     auto_merger.merge_pull_requests()
     if send_email:
         if not auto_merger.send_results(send_email):
             return 1
+    auto_merger.clean_dirs()
     return ret_value

@@ -167,7 +167,9 @@ class AutoMerger:
                 )
                 continue
             approval_count = self.check_pr_approvals(pr["reviews"])
+            logger.debug(f"Approval count is {approval_count}")
             if not self.check_pr_lifetime(pr=pr):
+                logger.debug(f"Pr is not valid for more  then {self.config.github['pr_lifetime']}")
                 continue
             self.pr_to_merge[self.container_name].append(
                 {
@@ -200,10 +202,15 @@ class AutoMerger:
         os.chdir(self.current_dir)
         if self.container_dir.exists():
             shutil.rmtree(self.container_dir)
+        if Path(self.temp_dir).exists():
+            shutil.rmtree(self.temp_dir)
 
     def merge_pr(self):
         for pr in self.pr_to_merge[self.container_name]:
             if int(pr["approvals"]) < self.approvals:
+                logger.debug(
+                    f"Automerger does not have enough approvals '{pr['approvals']}' against '{self.approvals}' "
+                )
                 continue
 
             logger.info(f"Let's try to merge {pr['number']}....")
@@ -237,29 +244,23 @@ class AutoMerger:
                     logger.error(f"Something went wrong {self.container_name}.")
                     continue
         os.chdir(self.current_dir)
+        logger.debug(f"List of all PRs to merge: '{self.pr_to_merge}'")
         return True
 
     def print_pull_request_to_merge(self):
-        # Do not print anything in case we do not have PR.
-        if not [x for x in self.pr_to_merge if self.pr_to_merge[x]]:
-            logger.info(
-                f"Nothing to be merged in repos {self.config.github['repos']} " f"in organization {self.namespace}"
-            )
-            return
         to_approval: bool = False
         pr_body: list[str] = []
         logger.info("SUMMARY")
-        for container, pr_list in self.pr_to_merge.items():
+        for cont, pr_list in self.pr_to_merge.items():
+            logger.debug(f"Print info about {cont} and {pr_list}.")
             for pr in pr_list:
                 if not pr:
                     continue
-                if int(pr["approvals"]) < self.approvals:
-                    continue
                 to_approval = True
                 result_pr = "CAN BE MERGED"
-                logger.info(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} -> {result_pr}")
+                logger.info(f"https://github.com/{self.namespace}/{cont}/pull/{pr['number']} -> {result_pr}")
                 pr_body.append(
-                    f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
+                    f"<tr><td>https://github.com/{self.namespace}/{cont}/pull/{pr['number']}</td>"
                     f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
                 )
             if to_approval:
