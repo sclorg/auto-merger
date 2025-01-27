@@ -75,7 +75,7 @@ def test_print_pull_request_to_merge_success():
     test_config = Config()
     auto_merger = AutoMerger(config=test_config.get_from_dict(yaml_merger))
     auto_merger.pr_to_merge = {
-        "valkey-container": [{"number": 2, "pr_dict": {"title": "valkey_title"}}],
+        "valkey-container": [{"number": 2, "title": "valkey_title"}],
         "httpd-container": [],
     }
     assert auto_merger.print_pull_request_to_merge() is True
