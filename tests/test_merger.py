@@ -39,3 +39,44 @@ def test_get_gh_pr_list(pr_created_date, pr_lifetime, return_code):
         "createdAt": pr_created_date,
     }
     assert auto_merger.check_pr_lifetime(pr) == return_code
+
+
+@pytest.mark.parametrize(
+    "review_data,return_code",
+    (
+        ([{"state": "APPROVED"}], 1),
+        ([{"state": "COMMENTED"}], 0),
+        ([{"state": "APPROVED"}, {"state": "APPROVED"}], 2),
+        ([], 0),
+    ),
+)
+def test_get_approvals(review_data, return_code):
+    test_config = Config()
+    auto_merger = AutoMerger(config=test_config.get_from_dict(yaml_merger))
+    assert auto_merger.check_pr_approvals(review_data) == return_code
+
+
+@pytest.mark.parametrize(
+    "pr_to_merge,return_code,approval_body",
+    (
+        ({}, False, []),
+        ({"valkey-container": []}, False, []),
+    ),
+)
+def test_print_pull_request_to_merge_failed(pr_to_merge, return_code, approval_body):
+    test_config = Config()
+    auto_merger = AutoMerger(config=test_config.get_from_dict(yaml_merger))
+    auto_merger.pr_to_merge = pr_to_merge
+    assert auto_merger.print_pull_request_to_merge() == return_code
+    assert auto_merger.approval_body == approval_body
+
+
+def test_print_pull_request_to_merge_success():
+    test_config = Config()
+    auto_merger = AutoMerger(config=test_config.get_from_dict(yaml_merger))
+    auto_merger.pr_to_merge = {
+        "valkey-container": [{"number": 2, "title": "valkey_title"}],
+        "httpd-container": [],
+    }
+    assert auto_merger.print_pull_request_to_merge() is True
+    assert auto_merger.approval_body != []
