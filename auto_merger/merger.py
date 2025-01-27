@@ -107,13 +107,11 @@ class AutoMerger:
 
     def check_pr_approvals(self, reviews_to_check) -> int:
         if not reviews_to_check:
-            return False
+            return 0
         approval_cnt = 0
         for review in reviews_to_check:
             if review["state"] == "APPROVED":
                 approval_cnt += 1
-        if approval_cnt < self.approvals:
-            logger.debug(f"Not enough approvals: {approval_cnt}. Should be at least {self.approvals}")
         return approval_cnt
 
     @staticmethod
@@ -167,6 +165,9 @@ class AutoMerger:
                 )
                 continue
             approval_count = self.check_pr_approvals(pr["reviews"])
+            if approval_count < self.approvals:
+                logger.debug(f"Not enough approvals: {approval_count}. Should be at least {self.approvals}")
+                continue
             logger.debug(f"Approval count is {approval_count}")
             if not self.check_pr_lifetime(pr=pr):
                 logger.debug(f"Pr is not valid for more  then {self.config.github['pr_lifetime']}")
@@ -175,11 +176,10 @@ class AutoMerger:
                 {
                     "number": pr["number"],
                     "approvals": approval_count,
-                    "pr_dict": {
-                        "title": pr["title"],
-                    },
+                    "title": pr["title"],
                 }
             )
+        logger.debug(self.pr_to_merge)
         return True
 
     def clone_repo(self):
@@ -215,7 +215,7 @@ class AutoMerger:
 
             logger.info(f"Let's try to merge {pr['number']}....")
             try:
-                output = utils.run_command(f"gh pr merge --rebase {pr['number']}", return_output=True)
+                output = utils.run_command(f"gh pr merge --rebase --auto {pr['number']}", return_output=True)
                 logger.debug(f"The output from merging command '{output}'")
             except subprocess.CalledProcessError as cpe:
                 logger.error(f"Merging pr {pr} failed with reason {cpe.output}")
@@ -247,31 +247,28 @@ class AutoMerger:
         logger.debug(f"List of all PRs to merge: '{self.pr_to_merge}'")
         return True
 
-    def print_pull_request_to_merge(self):
-        to_approval: bool = False
-        pr_body: list[str] = []
+    def print_pull_request_to_merge(self) -> bool:
         logger.info("SUMMARY")
+        if not self.pr_to_merge:
+            return False
+        is_there_something = [cont for cont in self.pr_to_merge.keys() if self.pr_to_merge[cont]]
+        if not is_there_something:
+            logger.info("There is nothing to send or merge.")
+            return False
+        self.approval_body.append("Pull requests that can be merged.")
+        self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
         for cont, pr_list in self.pr_to_merge.items():
             logger.debug(f"Print info about {cont} and {pr_list}.")
             for pr in pr_list:
                 if not pr:
                     continue
-                to_approval = True
-                result_pr = "CAN BE MERGED"
-                logger.info(f"https://github.com/{self.namespace}/{cont}/pull/{pr['number']} -> {result_pr}")
-                pr_body.append(
-                    f"<tr><td>https://github.com/{self.namespace}/{cont}/pull/{pr['number']}</td>"
-                    f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
-                )
-            if to_approval:
-                self.approval_body.append("Pull requests that can be merged.")
+                logger.info(f"https://github.com/{self.namespace}/{cont}/pull/{pr['number']} -> CAN BE MERGED")
                 self.approval_body.append(
-                    "<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>"
+                    f"<tr><td> https://github.com/{self.namespace}/{cont}/pull/{pr['number']} </td>"
+                    f"<td> {pr['title']} </td><td><p style='color:red;'> CAN BE MERGED </p></td></tr>"
                 )
-                self.approval_body.extend(pr_body)
-                self.approval_body.append("</table><br>")
-        if not to_approval:
-            logger.info(f"Nothing to be merged in repos {self.config.github['repos']} in organization {self.namespace}")
+        self.approval_body.append("</table><br>")
+        return True
 
     def send_results(self, recipients):
         logger.debug(f"Recipients are: {recipients}")
