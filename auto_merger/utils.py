@@ -119,3 +119,9 @@ def cwd(path):
         yield
     finally:
         os.chdir(prev_cwd)
+
+
+def get_realtime():
+    from datetime import datetime
+
+    return datetime.now()

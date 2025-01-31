@@ -35,6 +35,7 @@ from pathlib import Path
 from auto_merger import utils
 from auto_merger.email import EmailSender
 from auto_merger.config import Config
+from auto_merger.pull_request_handler import PullRequestHandler
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +75,9 @@ class PRStatusChecker:
         cmd = ["gh pr list -s open --json number,title,labels,reviews,isDraft"]
         repo_data_output = PRStatusChecker.get_gh_json_output(cmd=cmd)
         for pr in repo_data_output:
-            if PRStatusChecker.is_draft(pr):
+            if PullRequestHandler.is_draft(pull_request=pr):
                 continue
-            if self.is_changes_requested(pr):
+            if PullRequestHandler.is_changes_requested(pull_request=pr):
                 continue
             self.repo_data.append(pr)
 
@@ -117,10 +118,8 @@ class PRStatusChecker:
         self.blocked_pr[self.container_name].append(
             {
                 "number": pull_request["number"],
-                "pr_dict": {
-                    "title": pull_request["title"],
-                    "labels": pull_request["labels"],
-                },
+                "title": pull_request["title"],
+                "labels": pull_request["labels"],
             }
         )
         logger.debug(f"PR {pull_request['number']} added to blocked")
@@ -137,81 +136,24 @@ class PRStatusChecker:
                 logger.info(f"Add PR'{pr['number']}' to blocked PRs.")
                 self.add_blocked_pull_request(pull_request=pr)
 
-    def check_labels_to_merge(self, pr) -> bool:
-        """
-        Function checks labels for each pull request
-        'label' is compared against configuration file 'github': 'blocking_labels'
-        :param pr: pull request dictionary with labels
-        :return: False is labels are not present or 'label' is int 'blocking_labels'
-                 True pull request is approved. No blocking issue
-        """
-        if "labels" not in pr:
-            return False
-        for label in pr["labels"]:
-            if label["name"] in self.blocking_labels:
-                return False
-        logger.debug(f"Add '{pr['number']}' to approved PRs.")
-        return True
-
-    def check_pr_approvals(self, reviews_to_check: dict = None) -> int:
-        """
-        Function checks if PR has enough approvals
-        :param reviews_to_check: List of review to check for specific pull request
-        :return: Number of approvals
-        """
-        logger.debug(f"Approvals to check: {reviews_to_check}")
-        if not reviews_to_check:
-            return False
-        approval_cnt = 0
-        for review in reviews_to_check:
-            if review["state"] == "APPROVED":
-                approval_cnt += 1
-        if approval_cnt < 2:
-            logger.debug(f"Approval count: {approval_cnt}")
-        return approval_cnt
-
-    def is_changes_requested(self, pr) -> bool:
-        """
-        Function checks if pull request is marked as 'changes request'
-        :param pr: dictionary with pull reqyest
-        :return: True if changes are requested
-                 False if changes are not requested
-        """
-        if "labels" not in pr:
-            return False
-        for labels in pr["labels"]:
-            if "pr/changes-requested" == labels["name"]:
-                return True
-        return False
-
-    @staticmethod
-    def is_draft(pull_request) -> bool:
-        """
-        Function returns if pull request is draft or not.
-        :param pull_request: Pull request with field 'isDraft'
-        :return:    True for draft
-                    False not draft
-        """
-        if "isDraft" in pull_request:
-            if pull_request["isDraft"] in ["True", "true"]:
-                return True
-        return False
-
     def check_pr_to_merge(self) -> bool:
         if len(self.repo_data) == 0:
             return False
         pr_to_merge: bool = False
         for pr in self.repo_data:
             logger.debug(f"PR status: {pr}")
-            if not self.check_labels_to_merge(pr):
+            if not PullRequestHandler.check_labels_to_merge(pull_request=pr, blocking_labels=self.blocking_labels):
                 continue
             if "reviews" not in pr:
                 continue
-            approval_count = self.check_pr_approvals(pr["reviews"])
+            approval_count = PullRequestHandler.check_pr_approvals(reviews_to_check=pr["reviews"])
+            if approval_count < self.approvals:
+                logger.debug(f"Not enough approvals: {approval_count}. Should be at least {self.approvals}")
+                continue
             self.pr_to_merge[self.container_name] = {
                 "number": pr["number"],
                 "approvals": approval_count,
-                "pr_dict": {"title": pr["title"]},
+                "title": pr["title"],
             }
             pr_to_merge = True
         return pr_to_merge
@@ -269,10 +211,14 @@ class PRStatusChecker:
             labels.append(lbl["name"])
         return labels
 
-    def print_blocked_pull_request(self):
-        # Do not print anything in case we do not have PR.
-        if not [x for x in self.blocked_pr if self.blocked_pr[x]]:
-            return
+    def print_blocked_pull_request(self) -> bool:
+        logger.info("SUMMARY")
+        if not self.pr_to_merge:
+            return False
+        is_there_something = [cont for cont in self.pr_to_merge.keys() if self.pr_to_merge[cont]]
+        if not is_there_something:
+            logger.info("There is nothing to send or merge.")
+            return False
         logger.info(f"SUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>")
         self.blocked_body.append(
             f"Pull requests that are blocked by labels <b>[{', '.join(self.blocking_labels)}]</b><br><br>"
@@ -294,7 +240,8 @@ class PRStatusChecker:
                     f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>"
                     f"{' '.join(blocked_labels)}</p></td></tr>"
                 )
-            self.blocked_body.append("</table><br><br>")
+        self.blocked_body.append("</table><br><br>")
+        return True
 
     def print_approval_pull_request(self):
         # Do not print anything in case we do not have PR.

@@ -14,7 +14,7 @@ github:
     - s2i-perl-container
     - s2i-nodejs-container
   # How many approvals should have PR - default is 2
-  approvals: 2
+  approvals: 1
   # How many days, PR should be opened - default is 1 day
   pr_lifetime: 1
   # Labels that blockes merges
