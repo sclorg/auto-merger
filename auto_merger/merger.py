@@ -29,14 +29,13 @@ import os
 import shutil
 import logging
 
-from datetime import datetime, timedelta
 from pathlib import Path
 
 from auto_merger import utils
 from auto_merger.config import Config
 from auto_merger.utils import cwd
 from auto_merger.email import EmailSender
-
+from auto_merger.pull_request_handler import PullRequestHandler
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +74,9 @@ class AutoMerger:
         cmd = ["gh pr list -s open --json number,title,labels,reviews,isDraft,createdAt"]
         repo_data_output = AutoMerger.get_gh_json_output(cmd=cmd)
         for pr in repo_data_output:
-            if AutoMerger.is_draft(pr):
+            if PullRequestHandler.is_draft(pull_request=pr):
                 continue
-            if self.is_changes_requested(pr):
+            if PullRequestHandler.is_changes_requested(pull_request=pr):
                 continue
             self.repo_data.append(pr)
 
@@ -105,50 +104,6 @@ class AutoMerger:
                 return True
         return False
 
-    def check_pr_approvals(self, reviews_to_check) -> int:
-        if not reviews_to_check:
-            return 0
-        approval_cnt = 0
-        for review in reviews_to_check:
-            if review["state"] == "APPROVED":
-                approval_cnt += 1
-        return approval_cnt
-
-    @staticmethod
-    def is_changes_requested(pr):
-        if "labels" not in pr:
-            return False
-        for labels in pr["labels"]:
-            if "pr/changes-requested" == labels["name"]:
-                return True
-        return False
-
-    @staticmethod
-    def get_realtime():
-        from datetime import datetime
-
-        return datetime.now()
-
-    @staticmethod
-    def is_draft(pull_request):
-        if "isDraft" in pull_request:
-            if pull_request["isDraft"] in ["True", "true"]:
-                return True
-        return False
-
-    def check_pr_lifetime(self, pr=None) -> bool:
-        if pr is None:
-            return False
-        if self.pr_lifetime == 0:
-            return True
-        if "createdAt" not in pr:
-            return False
-        pr_life = pr["createdAt"]
-        date_created = datetime.strptime(pr_life, "%Y-%m-%dT%H:%M:%SZ") + timedelta(days=1)
-        if date_created < AutoMerger.get_realtime():
-            return True
-        return False
-
     def check_pr_to_merge(self) -> bool:
         if len(self.repo_data) == 0:
             return False
@@ -164,12 +119,12 @@ class AutoMerger:
                     f" pull request {pr['number']} does not have reviews yet."
                 )
                 continue
-            approval_count = self.check_pr_approvals(pr["reviews"])
+            approval_count = PullRequestHandler.check_pr_approvals(reviews_to_check=pr["reviews"])
             if approval_count < self.approvals:
                 logger.debug(f"Not enough approvals: {approval_count}. Should be at least {self.approvals}")
                 continue
             logger.debug(f"Approval count is {approval_count}")
-            if not self.check_pr_lifetime(pr=pr):
+            if not PullRequestHandler.check_pr_lifetime(pull_request=pr):
                 logger.debug(f"Pr is not valid for more  then {self.config.github['pr_lifetime']}")
                 continue
             self.pr_to_merge[self.container_name].append(
@@ -255,7 +210,7 @@ class AutoMerger:
         if not is_there_something:
             logger.info("There is nothing to send or merge.")
             return False
-        self.approval_body.append("Pull requests that can be merged.")
+        self.approval_body.append("Pull requests are merged.")
         self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
         for cont, pr_list in self.pr_to_merge.items():
             logger.debug(f"Print info about {cont} and {pr_list}.")
@@ -275,7 +230,7 @@ class AutoMerger:
         if not recipients:
             return False
         sender_class = EmailSender(recipient_email=list(recipients))
-        subject_msg = f"Pull request statuses for organization https://github.com/{self.namespace}"
+        subject_msg = "Merge request update"
         if self.approval_body:
             sender_class.send_email(subject_msg, self.approval_body)
         else:

@@ -7,6 +7,8 @@ from flexmock import flexmock
 
 from auto_merger.config import Config
 from auto_merger.merger import AutoMerger
+from auto_merger import utils
+from auto_merger.pull_request_handler import PullRequestHandler
 
 
 yaml_merger = {
@@ -31,14 +33,14 @@ yaml_merger = {
 )
 def test_get_gh_pr_list(pr_created_date, pr_lifetime, return_code):
     set_time = datetime.strptime("2024-12-20T10:35:20Z", "%Y-%m-%dT%H:%M:%SZ")
-    flexmock(AutoMerger).should_receive("get_realtime").and_return(set_time)
+    flexmock(utils).should_receive("get_realtime").and_return(set_time)
     test_config = Config()
     auto_merger = AutoMerger(config=test_config.get_from_dict(yaml_merger))
     auto_merger.pr_lifetime = pr_lifetime
     pr = {
         "createdAt": pr_created_date,
     }
-    assert auto_merger.check_pr_lifetime(pr) == return_code
+    assert PullRequestHandler.check_pr_lifetime(pull_request=pr, pr_lifetime=pr_lifetime) == return_code
 
 
 @pytest.mark.parametrize(
@@ -47,13 +49,11 @@ def test_get_gh_pr_list(pr_created_date, pr_lifetime, return_code):
         ([{"state": "APPROVED"}], 1),
         ([{"state": "COMMENTED"}], 0),
         ([{"state": "APPROVED"}, {"state": "APPROVED"}], 2),
-        ([], 0),
+        ({}, 0),
     ),
 )
 def test_get_approvals(review_data, return_code):
-    test_config = Config()
-    auto_merger = AutoMerger(config=test_config.get_from_dict(yaml_merger))
-    assert auto_merger.check_pr_approvals(review_data) == return_code
+    assert PullRequestHandler.check_pr_approvals(reviews_to_check=review_data) == return_code
 
 
 @pytest.mark.parametrize(

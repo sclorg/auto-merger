@@ -57,6 +57,7 @@ def merger(config: Config, send_email: list[str] | None) -> int:
         return ret_value
     is_there_pr_to_merge = auto_merger.print_pull_request_to_merge()
     if not is_there_pr_to_merge:
+        auto_merger.clean_dirs()
         return 0
     auto_merger.merge_pull_requests()
     if send_email:
