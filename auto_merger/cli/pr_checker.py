@@ -20,15 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
-import logging
 import click
 import sys
 
 from auto_merger.config import pass_config
 from auto_merger import api
-
-logger = logging.getLogger("auto-merger")
 
 
 @click.command("pr-checker")

@@ -21,15 +21,11 @@
 # SOFTWARE.
 
 
-import logging
 import click
 import sys
 
 from auto_merger.config import pass_config
 from auto_merger import api
-
-
-logger = logging.getLogger(__name__)
 
 
 @click.command("merger")

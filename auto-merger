@@ -30,21 +30,17 @@ import click
 import sys
 
 from auto_merger.config import Config
-from auto_merger.utils import setup_logger, check_mandatory_config_fields
+from auto_merger.utils import check_mandatory_config_fields
+from auto_merger.custom_logger import setup_logger
 from auto_merger.cli.pr_checker import pr_checker
 from auto_merger.cli.merger import merger
 from auto_merger.exceptions import AutoMergerConfigException
-
-logger = logging.getLogger("auto-merger")
 
 
 @click.group("auto-merger")
 @click.option("-d", "--debug", is_flag=True, default=False, help="Enable debug logs")
 @click.pass_context
 def auto_merger(ctx, debug):
-    if debug:
-        setup_logger(level=logging.DEBUG)
-
     try:
         c = Config.get_default_config()
         if not c:
@@ -56,12 +52,11 @@ def auto_merger(ctx, debug):
     except AutoMergerConfigException:
         sys.exit(10)
     ctx.obj = c
-    logger.debug(f"auto_merger Debug: {ctx.obj.debug}")
     ctx.obj.debug = debug
     if ctx.obj.debug:
-        setup_logger(level=logging.DEBUG)
+        logger = setup_logger(level=logging.DEBUG)
     else:
-        setup_logger(level=logging.INFO)
+        logger = setup_logger(level=logging.INFO)
     logger.debug("Let's get analyses")
 
 

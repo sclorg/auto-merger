@@ -27,17 +27,17 @@ import json
 import subprocess
 import os
 import shutil
-import logging
 
 from typing import Any
 from pathlib import Path
 
 from auto_merger import utils
+from auto_merger.custom_logger import setup_logger
 from auto_merger.email import EmailSender
 from auto_merger.config import Config
 from auto_merger.pull_request_handler import PullRequestHandler
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(logger_name="auto_merger.pr_checker")
 
 
 class PRStatusChecker:

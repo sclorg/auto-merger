@@ -20,13 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import logging
 
+from auto_merger.custom_logger import setup_logger
 from auto_merger.pr_checker import PRStatusChecker
 from auto_merger.config import Config
 from auto_merger.merger import AutoMerger
 
-logger = logging.getLogger(__name__)
+
+logger = setup_logger(logger_name="auto_merger.api")
 
 
 def pull_request_checker(config: Config, send_email: list[str] | None) -> int:
