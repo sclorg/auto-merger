@@ -37,7 +37,7 @@ from auto_merger.email import EmailSender
 from auto_merger.config import Config
 from auto_merger.pull_request_handler import PullRequestHandler
 
-logger = setup_logger(logger_name="auto_merger.pr_checker")
+logger = setup_logger(__name__)
 
 
 class PRStatusChecker:
@@ -88,8 +88,8 @@ class PRStatusChecker:
                  False user is not authenticated
         """
         token = os.getenv("GH_TOKEN")
-        if token == "":
-            logger.error("Environment variable GH_TOKEN is not specified.")
+        if token is None:
+            logger.critical("Environment variable GH_TOKEN is not specified.")
             return False
         cmd = ["gh status"]
         logger.debug(f"Authentication command: {cmd}")
@@ -212,12 +212,12 @@ class PRStatusChecker:
         return labels
 
     def print_blocked_pull_request(self) -> bool:
-        logger.info("SUMMARY")
+        logger.warning("SUMMARY")
         if not self.pr_to_merge:
             return False
         is_there_something = [cont for cont in self.pr_to_merge.keys() if self.pr_to_merge[cont]]
         if not is_there_something:
-            logger.info("There is nothing to send or merge.")
+            logger.warning("There is nothing to send or merge.")
             return False
         logger.info(f"SUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>")
         self.blocked_body.append(
@@ -227,12 +227,12 @@ class PRStatusChecker:
         for container, pull_requests in self.blocked_pr.items():
             if not pull_requests:
                 continue
-            logger.info(f"\n{container}\n------\n")
+            logger.warning(f"\n{container}\n------\n")
             self.blocked_body.append(f"<b>{container}<b>:")
             self.blocked_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Missing labels</th></tr>")
             for pr in pull_requests:
                 blocked_labels = self.get_blocked_labels(pr["pr_dict"])
-                logger.info(
+                logger.warning(
                     f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} {' '.join(blocked_labels)}"
                 )
                 self.blocked_body.append(
@@ -247,7 +247,7 @@ class PRStatusChecker:
         # Do not print anything in case we do not have PR.
         if not [x for x in self.pr_to_merge if self.pr_to_merge[x]]:
             return
-        logger.info("SUMMARY\n\nPull requests that can be merged approvals")
+        logger.warning("SUMMARY\n\nPull requests that can be merged approvals")
         self.approval_body.append(f"Pull requests that can be merged or missing {self.approvals} approvals")
         self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
         for container, pr in self.pr_to_merge.items():
@@ -257,7 +257,7 @@ class PRStatusChecker:
                 result_pr = "CAN BE MERGED"
             else:
                 result_pr = f"Missing {self.approvals-int(pr['approvals'])} APPROVAL"
-            logger.info(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} - {result_pr}")
+            logger.warning(f"https://github.com/{self.namespace}/{container}/pull/{pr['number']} - {result_pr}")
             self.approval_body.append(
                 f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
                 f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"

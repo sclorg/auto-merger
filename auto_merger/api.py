@@ -38,7 +38,7 @@ def pull_request_checker(config: Config, send_email: list[str] | None) -> int:
     pr_status_checker = PRStatusChecker(config=config)
     ret_value = pr_status_checker.check_all_containers()
     if not ret_value:
-        pr_status_checker.clean_dirs()
+        # pr_status_checker.clean_dirs()
         return ret_value
     pr_status_checker.print_blocked_pull_request()
     pr_status_checker.print_approval_pull_request()
