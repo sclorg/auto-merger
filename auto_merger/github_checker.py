@@ -40,7 +40,7 @@ from auto_merger.pull_request_handler import PullRequestHandler
 logger = logging.getLogger(__name__)
 
 
-class PRStatusChecker:
+class GitHubStatusChecker:
     container_name: str = ""
     container_dir: Path
     current_dir = os.getcwd()
@@ -60,7 +60,7 @@ class PRStatusChecker:
 
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
-        repo_name = PRStatusChecker.get_gh_json_output(cmd=cmd)
+        repo_name = GitHubStatusChecker.get_gh_json_output(cmd=cmd)
         logger.debug(repo_name)
         if repo_name["name"] == self.container_name:
             return True
@@ -73,7 +73,7 @@ class PRStatusChecker:
 
     def get_gh_pr_list(self):
         cmd = ["gh pr list -s open --json number,title,labels,reviews,isDraft"]
-        repo_data_output = PRStatusChecker.get_gh_json_output(cmd=cmd)
+        repo_data_output = GitHubStatusChecker.get_gh_json_output(cmd=cmd)
         for pr in repo_data_output:
             if PullRequestHandler.is_draft(pull_request=pr):
                 continue
@@ -172,6 +172,9 @@ class PRStatusChecker:
             logger.debug(f"PR to merge {pr} in repo {self.container_name}.")
 
     def clean_dirs(self):
+        logger.debug(
+            f"Let's clean directories, that were created by the tool. {self.container_dir} and {self.temp_dir}"
+        )
         os.chdir(self.current_dir)
         if self.container_dir.exists():
             shutil.rmtree(self.container_dir)

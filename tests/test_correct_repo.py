@@ -3,7 +3,7 @@
 from flexmock import flexmock
 
 from auto_merger.config import Config
-from auto_merger.pr_checker import PRStatusChecker
+from auto_merger.github_checker import PRStatusChecker
 
 
 def test_get_gh_pr_correct_repo(get_repo_name, default_config_merger):
