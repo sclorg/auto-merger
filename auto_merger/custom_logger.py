@@ -20,41 +20,50 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
 import logging
 
-# Define custom colors
-BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+from logging import Formatter
 
-# These are the sequences need to reset the print coloring
-RESET_SEQ = "\033[0m"
-COLOR_SEQ = "\033[1;%dm"
-BOLD_SEQ = "\033[1m"
+PREFIX = "\033["
+SUFFIX = "\033[0m"
 
-# def formatter_message(message):
-#     message = message.replace("$RESET", RESET_SEQ).replace("$BOLD", BOLD_SEQ)
-#     return message
-#
-#
-# COLORS = {
-#     'WARNING': YELLOW,
-#     'INFO': GREEN,
-#     'DEBUG': BLUE,
-#     'CRITICAL': RED,
-#     'ERROR': RED
-# }
+
+class ColoredFormatter(Formatter):
+    grey = "\033[38m"
+    yellow = "\033[33m"
+    red = "\033[31m"
+    bold_red = "\033[31;1m"
+    reset = "\033[0m"
+    green = "\033[36m"
+    format_info = "%(message)s"
+    format_debug = "%(levelname)s - %(name)s - %(message)s"
+
+    FORMATS = {
+        logging.DEBUG: grey + format_debug + reset,
+        logging.INFO: green + format_info + reset,
+        logging.WARNING: yellow + format_debug + reset,
+        logging.ERROR: red + format_debug + reset,
+        logging.CRITICAL: bold_red + format_debug + reset,
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
 
 
 def setup_logger(logger_name: str = "automerger", level=logging.INFO):
     logger = logging.getLogger(logger_name)
     # Check if handlers already exist (to avoid duplicate logs)
     if not logger.handlers:
-        logger.setLevel(level=level)
         # Create a console handler
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        console_formatter = logging.Formatter("%(message)s")
-        console_handler.setFormatter(console_formatter)
+        console_handler.setLevel(level)
+        # if level == logging.INFO:
+        #     console_formatter = ColoredFormatter("%(message)s")
+        # else:
+        #     console_formatter = ColoredFormatter("%(levelname)s - %(name)s - %(message)s")
+        console_handler.setFormatter(ColoredFormatter())
 
         # Create a file handler
         file_handler = logging.FileHandler("automerger.log")
@@ -64,5 +73,6 @@ def setup_logger(logger_name: str = "automerger", level=logging.INFO):
 
         logger.addHandler(console_handler)
         logger.addHandler(file_handler)
+        logger.setLevel(logging.DEBUG)
 
     return logger

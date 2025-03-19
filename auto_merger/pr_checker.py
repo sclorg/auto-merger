@@ -127,7 +127,7 @@ class PRStatusChecker:
 
     def check_blocked_labels(self):
         for pr in self.repo_data:
-            logger.info(f"- Checking PR {pr['number']}")
+            logger.debug(f"- Checking PR {pr['number']}")
             if "labels" not in pr:
                 continue
             for label in pr["labels"]:
