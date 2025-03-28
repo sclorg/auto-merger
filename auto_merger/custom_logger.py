@@ -26,7 +26,7 @@ from colorama import Fore, Style
 
 class ColoredFormatter(logging.Formatter):
     COLORS = {
-        "DEBUG": Fore.BLUE,
+        "DEBUG": Fore.LIGHTBLUE_EX,
         "INFO": Fore.GREEN,
         "WARNING": Fore.YELLOW,
         "ERROR": Fore.RED,
