@@ -21,30 +21,26 @@
 # SOFTWARE.
 
 import logging
-
-from logging import Formatter
-
-PREFIX = "\033["
-SUFFIX = "\033[0m"
+from colorama import Fore, Style
 
 
-class ColoredFormatter(Formatter):
-    grey = "\033[38m"
-    yellow = "\033[33m"
-    red = "\033[31m"
-    bold_red = "\033[31;1m"
-    reset = "\033[0m"
-    green = "\033[91m"
-    blue = "\033[34m"
-    format_info = "%(message)s"
-    format_debug = "%(levelname)s - %(name)s - %(message)s"
+class ColoredFormatter(logging.Formatter):
+    COLORS = {
+        "DEBUG": Fore.BLUE,
+        "INFO": Fore.GREEN,
+        "WARNING": Fore.YELLOW,
+        "ERROR": Fore.RED,
+        "CRITICAL": Fore.RED + Style.BRIGHT,
+    }
+    FORMAT_INFO = "%(message)s"
+    FORMAT_DEBUG = "%(levelname)s - %(name)s - %(message)s"
 
     FORMATS = {
-        logging.DEBUG: blue + format_debug + reset,
-        logging.INFO: green + format_info + reset,
-        logging.WARNING: yellow + format_info + reset,
-        logging.ERROR: red + format_debug + reset,
-        logging.CRITICAL: bold_red + format_debug + reset,
+        logging.DEBUG: COLORS["DEBUG"] + FORMAT_DEBUG + Style.RESET_ALL,
+        logging.INFO: COLORS["INFO"] + FORMAT_INFO + Style.RESET_ALL,
+        logging.WARNING: COLORS["WARNING"] + FORMAT_INFO + Style.RESET_ALL,
+        logging.ERROR: COLORS["ERROR"] + FORMAT_DEBUG + Style.RESET_ALL,
+        logging.CRITICAL: COLORS["CRITICAL"] + FORMAT_DEBUG + Style.RESET_ALL,
     }
 
     def format(self, record):
