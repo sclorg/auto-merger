@@ -30,7 +30,7 @@ from pathlib import Path
 from auto_merger.exceptions import AutoMergerConfigException
 
 
-logger = logging.getLogger("auto-merger")
+logger = logging.getLogger("auto_merger.config")
 
 
 class Config:
@@ -63,7 +63,6 @@ class Config:
                 config.github["approvals"] = 2
             if "pr_lifetime" not in config.github:
                 config.github["pr_lifetime"] = 1
-        logger.debug(str(config))
         return config
 
     def __repr__(self):

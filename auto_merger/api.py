@@ -20,24 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import logging
 
+from auto_merger.custom_logger import setup_logger
 from auto_merger.pr_checker import PRStatusChecker
 from auto_merger.config import Config
 from auto_merger.merger import AutoMerger
 
-logger = logging.getLogger(__name__)
+#
+# logger = setup_logger(logger_name="auto_merger.api")
 
 
 def pull_request_checker(config: Config, send_email: list[str] | None) -> int:
     """
     Checks NVR from brew build against pulp
     """
+    logger = setup_logger(logger_name="auto_merger.pull_request_checker", level=config.debug)
     logger.debug(f"Configuration: {config.__str__()}")
     pr_status_checker = PRStatusChecker(config=config)
     ret_value = pr_status_checker.check_all_containers()
     if not ret_value:
-        pr_status_checker.clean_dirs()
+        # pr_status_checker.clean_dirs()
         return ret_value
     pr_status_checker.print_blocked_pull_request()
     pr_status_checker.print_approval_pull_request()
@@ -49,6 +51,7 @@ def pull_request_checker(config: Config, send_email: list[str] | None) -> int:
 
 
 def merger(config: Config, send_email: list[str] | None) -> int:
+    logger = setup_logger(logger_name="auto_merger.merger", level=config.debug)
     logger.debug(f"Configuration: {config.__str__()}")
     auto_merger = AutoMerger(config=config)
     ret_value = auto_merger.check_all_containers()

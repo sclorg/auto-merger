@@ -1,18 +1,19 @@
 github:
   namespace: "sclorg"
   repos:
-    - valkey-container
+    - httpd-container
     - mariadb-container
     - mysql-container
-    - postgresql-container
     - nginx-container
-    - httpd-container
+    - postgresql-container
     - redis-container
     - s2i-php-container
+    - s2i-base-container
     - s2i-python-container
     - s2i-ruby-container
     - s2i-perl-container
     - s2i-nodejs-container
+    - valkey-container
   # How many approvals should have PR - default is 2
   approvals: 1
   # How many days, PR should be opened - default is 1 day

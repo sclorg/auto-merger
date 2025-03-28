@@ -26,7 +26,7 @@ import logging
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("auto_merger.email")
 
 
 class EmailSender:
