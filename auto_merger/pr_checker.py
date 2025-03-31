@@ -238,7 +238,7 @@ class PRStatusChecker:
                     f"<td>{pr['title']}</td><td><p style='color:red;'>"
                     f"{' '.join(blocked_labels)}</p></td></tr>"
                 )
-        self.blocked_body.append("</table><br><br>")
+            self.blocked_body.append("</table><br><br>")
         return True
 
     def print_approval_pull_request(self):
@@ -247,10 +247,10 @@ class PRStatusChecker:
             return
         self.logger.warning("SUMMARY\n\nPull requests that can be merged approvals")
         self.approval_body.append(f"Pull requests that can be merged or missing {self.approvals} approvals")
-        self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
         for container, pr in self.pr_to_merge.items():
             if not pr:
                 continue
+            self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
             if int(pr["approvals"]) >= self.approvals:
                 result_pr = "CAN BE MERGED"
             else:
@@ -260,7 +260,7 @@ class PRStatusChecker:
                 f"<tr><td>https://github.com/{self.namespace}/{container}/pull/{pr['number']}</td>"
                 f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
             )
-        self.approval_body.append("</table><br>")
+            self.approval_body.append("</table><br>")
 
     def send_results(self, recipients):
         self.logger.debug(f"Recipients are: {recipients}")
