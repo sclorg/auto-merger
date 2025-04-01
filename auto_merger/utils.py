@@ -31,7 +31,7 @@ from contextlib import contextmanager
 from auto_merger.config import Config
 
 
-logger = logging.getLogger("auto_merger.utils")
+logger = logging.getLogger(__name__)
 
 
 def run_command(
@@ -80,28 +80,28 @@ def temporary_dir(prefix: str = "automerger") -> str:
     return temp_file.name
 
 
-def setup_logger(level=logging.INFO):
-    if level == logging.INFO:
-        format_str = "%(message)s"
-    else:
-        format_str = "%(name)s - %(levelname)s: %(message)s"
-    logging.basicConfig(level=level, format=format_str, handlers=[logging.StreamHandler()])
-
-
 def check_mandatory_config_fields(config: Config) -> bool:
     config_correct: bool = True
-    if "blocker_labels" not in config.github:
-        logger.error("In github section is missing 'blocker_labels'")
-        config_correct = False
-    if "approval_labels" not in config.github:
-        logger.error("In github section is missing 'approval_labels'")
-        config_correct = False
-    if "repos" not in config.github:
-        logger.error("In github section is missing 'repos'. No repositories are specified.")
-        config_correct = False
-    if "namespace" not in config.github:
-        logger.error("In github section is missing 'namespace'. are specified.")
-        config_correct = False
+    if config.github:
+        if "blocker_labels" not in config.github:
+            logger.error("In github section is missing 'blocker_labels'")
+            config_correct = False
+        if "approval_labels" not in config.github:
+            logger.error("In github section is missing 'approval_labels'")
+            config_correct = False
+        if "repos" not in config.github:
+            logger.error("In github section is missing 'repos'. No repositories are specified.")
+            config_correct = False
+    if config.gitlab:
+        if "blocker_labels" not in config.gitlab:
+            logger.error("In gitlab section is missing 'blocker_labels'")
+            config_correct = False
+        if "approval_labels" not in config.gitlab:
+            logger.error("In gitlab section is missing 'approval_labels'")
+            config_correct = False
+        if "repos" not in config.gitlab:
+            logger.error("In gitlab section is missing 'repos'. No repositories are specified.")
+            config_correct = False
     return config_correct
 
 

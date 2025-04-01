@@ -3,3 +3,5 @@ PyYAML
 flexmock
 click
 colorama
+python-gitlab
+chardet

@@ -27,7 +27,7 @@ from datetime import datetime, timedelta
 
 from auto_merger import utils
 
-logger = logging.getLogger("auto_merger.pull_request_handler")
+logger = logging.getLogger(__name__)
 
 
 class PullRequestHandler:

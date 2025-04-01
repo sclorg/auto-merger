@@ -30,7 +30,7 @@ from pathlib import Path
 from auto_merger.exceptions import AutoMergerConfigException
 
 
-logger = logging.getLogger("auto_merger.config")
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -38,6 +38,7 @@ class Config:
         self.debug: bool = True
         self.github: dict = {}
         self.gitlab: dict = {}
+        self.enable_gitlab: bool = False
 
     @classmethod
     def get_default_config(cls) -> "Config":
@@ -63,6 +64,14 @@ class Config:
                 config.github["approvals"] = 2
             if "pr_lifetime" not in config.github:
                 config.github["pr_lifetime"] = 1
+        if config.gitlab:
+            if "approvals" not in config.gitlab:
+                config.gitlab["approvals"] = 2
+            if "pr_lifetime" not in config.gitlab:
+                config.gitlab["mr_lifetime"] = 1
+            if "url" not in config.gitlab:
+                config.gitlab["url"] = "https://gitlab.com"
+        logger.debug(str(config))
         return config
 
     def __repr__(self):

@@ -21,50 +21,69 @@
 # SOFTWARE.
 
 
-from auto_merger.custom_logger import setup_logger
-from auto_merger.pr_checker import PRStatusChecker
+import logging
+
+from auto_merger.github_checker import GitHubStatusChecker
+from auto_merger.gitlab_checker import GitLabStatusChecker
 from auto_merger.config import Config
 from auto_merger.merger import AutoMerger
 
-#
-# logger = setup_logger(logger_name="auto_merger.api")
+
+logger = logging.getLogger(__name__)
+
+
+def merge_request_checker(config: Config, send_email: list[str] | None) -> int:
+    """
+    Checks NVR from brew build against pulp
+    """
+    logger.debug(f"Configuration: {config.__str__()}")
+
+    gl_checker = GitLabStatusChecker(config=config)
+
+    ret_value = gl_checker.check_all_containers()
+    if not ret_value:
+        return ret_value
+    gl_checker.print_blocked_merge_requests()
+    gl_checker.print_approval_pull_request()
+    if send_email:
+        if not gl_checker.send_results(send_email):
+            return 1
+    return ret_value
 
 
 def pull_request_checker(config: Config, send_email: list[str] | None) -> int:
     """
     Checks NVR from brew build against pulp
     """
-    logger = setup_logger(logger_name="auto_merger.pull_request_checker", level=config.debug)
     logger.debug(f"Configuration: {config.__str__()}")
-    pr_status_checker = PRStatusChecker(config=config)
-    ret_value = pr_status_checker.check_all_containers()
-    if not ret_value:
-        # pr_status_checker.clean_dirs()
-        return ret_value
-    pr_status_checker.print_blocked_pull_request()
-    pr_status_checker.print_approval_pull_request()
-    if send_email:
-        if not pr_status_checker.send_results(send_email):
-            return 1
-    pr_status_checker.clean_dirs()
-    return ret_value
+
+    gh_checker = GitHubStatusChecker(config=config)
+    try:
+        ret_value = gh_checker.check_all_containers()
+        if not ret_value:
+            return ret_value
+        gh_checker.print_blocked_pull_request()
+        gh_checker.print_approval_pull_request()
+        if send_email:
+            if not gh_checker.send_results(send_email):
+                return 1
+    finally:
+        gh_checker.clean_dirs()
 
 
 def merger(config: Config, send_email: list[str] | None) -> int:
-    logger = setup_logger(logger_name="auto_merger.merger", level=config.debug)
     logger.debug(f"Configuration: {config.__str__()}")
     auto_merger = AutoMerger(config=config)
     ret_value = auto_merger.check_all_containers()
-    if not ret_value:
+    try:
+        if not ret_value:
+            return ret_value
+        is_there_pr_to_merge = auto_merger.print_pull_request_to_merge()
+        if not is_there_pr_to_merge:
+            return 0
+        auto_merger.merge_pull_requests()
+        if send_email:
+            if not auto_merger.send_results(send_email):
+                return 1
+    finally:
         auto_merger.clean_dirs()
-        return ret_value
-    is_there_pr_to_merge = auto_merger.print_pull_request_to_merge()
-    if not is_there_pr_to_merge:
-        auto_merger.clean_dirs()
-        return 0
-    auto_merger.merge_pull_requests()
-    if send_email:
-        if not auto_merger.send_results(send_email):
-            return 1
-    auto_merger.clean_dirs()
-    return ret_value

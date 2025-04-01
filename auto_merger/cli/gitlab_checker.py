@@ -20,20 +20,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+
+import logging
 import click
 import sys
 
 from auto_merger.config import pass_config
 from auto_merger import api
 
+logger = logging.getLogger("auto-merger")
 
-@click.command("pr-checker")
+
+@click.command("gitlab-checker")
 @click.option(
     "--send-email",
     multiple=True,
     help="Specify email addresses to which the mail will be sent.",
 )
 @pass_config
-def pr_checker(config, send_email):
-    ret_value = api.pull_request_checker(config=config, send_email=send_email)
+def gitlab_checker(config, send_email):
+    ret_value = api.merge_request_checker(config=config, send_email=send_email)
     sys.exit(ret_value)

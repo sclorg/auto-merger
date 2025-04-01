@@ -28,15 +28,19 @@
 import logging
 import click
 import sys
+import requests
 
 from auto_merger.config import Config
-from auto_merger.utils import check_mandatory_config_fields
 from auto_merger.custom_logger import setup_logger
-from auto_merger.cli.pr_checker import pr_checker
+from auto_merger.utils import check_mandatory_config_fields
+from auto_merger.cli.github_checker import github_checker
+from auto_merger.cli.gitlab_checker import gitlab_checker
 from auto_merger.cli.merger import merger
 from auto_merger.exceptions import AutoMergerConfigException
 
-logger = logging.getLogger("auto-merger")
+requests.packages.urllib3.disable_warnings()
+
+logger = logging.getLogger(__name__)
 
 
 @click.group("auto-merger")
@@ -59,14 +63,11 @@ def auto_merger(ctx, debug):
         sys.exit(10)
     ctx.obj = c
     ctx.obj.debug = debug
-    # if ctx.obj.debug:
-    #     logger = setup_logger(level=logging.DEBUG)
-    # else:
-    #     logger = setup_logger(level=logging.INFO)
     logger.debug("Let's get analyses")
 
 
-auto_merger.add_command(pr_checker)
+auto_merger.add_command(github_checker)
+auto_merger.add_command(gitlab_checker)
 auto_merger.add_command(merger)
 
 
