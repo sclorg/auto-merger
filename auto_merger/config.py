@@ -30,7 +30,7 @@ from pathlib import Path
 from auto_merger.exceptions import AutoMergerConfigException
 
 
-logger = logging.getLogger("auto_merger.config")
+logger = logging.getLogger(__name__)
 
 
 class Config:

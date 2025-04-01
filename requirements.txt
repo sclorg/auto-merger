@@ -2,9 +2,6 @@ pytest
 PyYAML
 flexmock
 click
-<<<<<<< HEAD
 colorama
-||||||| parent of 6fadf9b (Add support for gitlab-check)
-=======
 python-gitlab
->>>>>>> 6fadf9b (Add support for gitlab-check)
+chardet

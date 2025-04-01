@@ -37,6 +37,7 @@ from auto_merger.config import Config
 from auto_merger.named_tuples import ProjectMR
 from auto_merger.pull_request_handler import PullRequestHandler
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,6 +62,7 @@ class GitLabStatusChecker:
         self.merge_requests: list = []
         self.temp_dir: Path
         self._gitlab_handler = None
+        self.project_id: str = ""
 
     @property
     def gitlab_handler(self):
@@ -138,6 +140,8 @@ class GitLabStatusChecker:
         if not self.gitlab_handler.check_authentication():
             logger.error("GitLab authentication failed.")
             return False
+        if "repos" not in self.config.gitlab:
+            return False
         for container in self.config.gitlab["repos"]:
             self.container_name = container if not self.namespace else f"{self.namespace}/{container}"
             logger.info(f"Let's check repository in {self.container_name}")
@@ -146,8 +150,10 @@ class GitLabStatusChecker:
             if self.container_name not in self.pr_to_merge:
                 self.pr_to_merge[self.container_name] = []
             try:
-                self.gitlab_handler.get_project_id_from_url(url=self.config.gitlab["url"], reponame=self.container_name)
-                self.merge_requests: list[ProjectMR] = self.gitlab_handler.get_project_mergerequests()
+                self.project_id = self.gitlab_handler.get_project_id_from_url(
+                    url=self.config.gitlab["url"], reponame=self.container_name
+                )
+                self.merge_requests: list[ProjectMR] = self.gitlab_handler.get_project_merge_requests(self.project_id)
                 logger.debug(f"List of MR for {self.container_name}")
                 if not self.merge_requests:
                     logger.info(f"No merge requests opened for project {self.container_name}")
@@ -167,7 +173,9 @@ class GitLabStatusChecker:
         logger.debug(f"Blocked PR to print {self.blocked_mr}")
         if not self.blocked_mr:
             return False
-        logger.info(f"SUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>")
+        logger.warning(
+            f"SUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>"
+        )
         self.blocked_body.append(
             f"Pull requests that are blocked by labels <b>[{', '.join(self.blocking_labels)}]</b><br><br>"
         )

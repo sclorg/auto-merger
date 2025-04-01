@@ -23,6 +23,8 @@
 import pytest
 import json
 
+from auto_merger.named_tuples import ProjectMR
+
 from tests.spellbook import DATA_DIR
 
 
@@ -111,5 +113,51 @@ def default_config_merger():
             "repos": ["s2i-nodejs-container"],
             "blocker_labels": ["pr/missing-review", "pr/failing-ci"],
             "approval_labels": ["READY-to-MERGE"],
-        }
+        },
+        "gitlab": {
+            "url": "https://gitlab.com",
+            "namespace": "redhat/rhel/containers",
+            "repos": ["postgresql-16", "postgresql-15", "postgresql-13"],
+            "blocker_labels": ["pr/missing-review", "pr/failing-ci"],
+            "approval_labels": ["READY-to-MERGE"],
+        },
     }
+
+
+@pytest.fixture()
+def no_gitlab_repos_config():
+    return {
+        "github": {
+            "namespace": "foobar",
+            "repos": ["s2i-nodejs-container"],
+            "blocker_labels": ["pr/missing-review", "pr/failing-ci"],
+            "approval_labels": ["READY-to-MERGE"],
+        },
+        "gitlab": {
+            "url": "https://gitlab.com",
+            "namespace": "redhat/rhel/containers",
+            "blocker_labels": ["pr/missing-review", "pr/failing-ci"],
+            "approval_labels": ["READY-to-MERGE"],
+        },
+    }
+
+
+@pytest.fixture()
+def merge_requests_psql_13():
+    return [
+        ProjectMR(
+            iid=181,
+            title="chore(deps): update registry.access.stage.redhat.com/ubi9/s2i-core:9.7 docker digest to 7be755f",
+            description="This MR contains",
+            target_branch="rhel-9.7.0",
+            author="group_56471695_bot_85c7f05542574c5ac5afa26519f52305",
+            source_project_id="https://gitlab.com/redhat/rhel/containers/postgresql-13/-/merge_requests/181",
+            target_project_id=False,
+            web_url="opened",
+            state=[],
+            reviewers=None,
+            labels=[],
+            merge_status="can_be_merged",
+            detailed_merge_status="mergeable",
+        )
+    ]

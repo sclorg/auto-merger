@@ -31,7 +31,7 @@ from contextlib import contextmanager
 from auto_merger.config import Config
 
 
-logger = logging.getLogger("auto_merger.utils")
+logger = logging.getLogger(__name__)
 
 
 def run_command(

@@ -75,8 +75,8 @@ class GitLabHandler:
             logger.error(f"Authentication failed with reason {gae}.")
             return None
 
-    def get_project_mergerequests(self) -> list[ProjectMR]:
-        self.project = self.gitlab_api.projects.get(self.project_id)
+    def get_project_merge_requests(self, project_id) -> list[ProjectMR]:
+        self.project = self.gitlab_api.projects.get(project_id)
         project_mr = self.project.mergerequests.list(state="opened")
         return [
             ProjectMR(
@@ -98,7 +98,7 @@ class GitLabHandler:
             if x.state == "opened"
         ]
 
-    def get_project_id_from_url(self, url: str, reponame: str):
+    def get_project_id_from_url(self, url: str, reponame: str) -> str:
         url = f"{url}/api/v4/projects"
         headers = {"Content-Type": "application/json", "PRIVATE-TOKEN": self.token}
         url = f"{url}/{reponame.replace('/', '%2F')}"
@@ -108,5 +108,6 @@ class GitLabHandler:
         if ret.status_code != 200:
             logger.error(f"Getting project_id failed for reason {ret.reason} {ret.json()} ")
             raise HTTPError
-        self.project_id = ret.json()["id"]
-        logger.debug(f"Project id returned from {url} is {self.project_id}")
+        project_id = ret.json()["id"]
+        logger.debug(f"Project id returned from {url} is {project_id}")
+        return project_id

@@ -49,8 +49,9 @@ class ColoredFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def setup_logger(logger_name: str = "auto-merger", level=logging.INFO):
+def setup_logger(logger_name: str = "auto_merger", level=logging.INFO):
     logger = logging.getLogger(logger_name)
+
     # Check if handlers already exist (to avoid duplicate logs)
     if not logger.handlers:
         # Create a console handler
@@ -66,7 +67,6 @@ def setup_logger(logger_name: str = "auto-merger", level=logging.INFO):
 
         logger.addHandler(console_handler)
         logger.addHandler(file_handler)
-
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(level=logging.DEBUG)
 
     return logger

@@ -21,15 +21,15 @@
 # SOFTWARE.
 
 
-from auto_merger.custom_logger import setup_logger
-from auto_merger.github_checker import GitHubStatusChecker
+import logging
+
 from auto_merger.github_checker import GitHubStatusChecker
 from auto_merger.gitlab_checker import GitLabStatusChecker
 from auto_merger.config import Config
 from auto_merger.merger import AutoMerger
 
-#
-# logger = setup_logger(logger_name="auto_merger.api")
+
+logger = logging.getLogger(__name__)
 
 
 def merge_request_checker(config: Config, send_email: list[str] | None) -> int:
@@ -37,7 +37,9 @@ def merge_request_checker(config: Config, send_email: list[str] | None) -> int:
     Checks NVR from brew build against pulp
     """
     logger.debug(f"Configuration: {config.__str__()}")
+
     gl_checker = GitLabStatusChecker(config=config)
+
     ret_value = gl_checker.check_all_containers()
     if not ret_value:
         return ret_value
@@ -53,7 +55,6 @@ def pull_request_checker(config: Config, send_email: list[str] | None) -> int:
     """
     Checks NVR from brew build against pulp
     """
-    logger = setup_logger(logger_name="auto_merger.pull_request_checker", level=config.debug)
     logger.debug(f"Configuration: {config.__str__()}")
 
     gh_checker = GitHubStatusChecker(config=config)
@@ -71,7 +72,6 @@ def pull_request_checker(config: Config, send_email: list[str] | None) -> int:
 
 
 def merger(config: Config, send_email: list[str] | None) -> int:
-    logger = setup_logger(logger_name="auto_merger.merger", level=config.debug)
     logger.debug(f"Configuration: {config.__str__()}")
     auto_merger = AutoMerger(config=config)
     ret_value = auto_merger.check_all_containers()
