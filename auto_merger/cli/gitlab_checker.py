@@ -37,7 +37,12 @@ logger = logging.getLogger("auto-merger")
     multiple=True,
     help="Specify email addresses to which the mail will be sent.",
 )
+@click.option(
+    "--json-output",
+    multiple=False,
+    help="Save auto-merge outputs in json format. Default is current working directory.",
+)
 @pass_config
-def gitlab_checker(config, send_email):
-    ret_value = api.merge_request_checker(config=config, send_email=send_email)
+def gitlab_checker(config, send_email, json_output):
+    ret_value = api.merge_request_checker(config=config, send_email=send_email, json_output=json_output)
     sys.exit(ret_value)

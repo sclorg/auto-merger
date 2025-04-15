@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # MIT License
 #
 # Copyright (c) 2018-2019 Red Hat, Inc.
@@ -20,25 +21,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import click
-import sys
+import pytest
 
-from auto_merger.config import pass_config
-from auto_merger import api
-
-
-@click.command("github-checker")
-@click.option(
-    "--send-email",
-    multiple=True,
-    help="Specify email addresses to which the mail will be sent.",
+from auto_merger.utils import check_mandatory_config_fields
+from auto_merger.config import Config
+from tests.conftest import (
+    get_config_dict_simple,
+    get_config_dict_miss_approval_lifetime,
+    default_config_merger,
+    no_gitlab_repos_config,
 )
-@click.option(
-    "--json-output",
-    multiple=False,
-    help="Save auto-merge outputs in json format. Default is current working directory.",
+
+
+@pytest.mark.parametrize(
+    "config_dict,expected_bool",
+    (
+        (get_config_dict_simple, True),
+        (get_config_dict_miss_approval_lifetime, True),
+        (default_config_merger, True),
+        (no_gitlab_repos_config, False),
+    ),
 )
-@pass_config
-def github_checker(config, send_email, json_output):
-    ret_value = api.pull_request_checker(config=config, send_email=send_email, json_output=json_output)
-    sys.exit(ret_value)
+def test_check_mandatory_fields_simple_config(config_dict, expected_bool):
+    test_config = Config()
+    ret_val = check_mandatory_config_fields(config=test_config.get_from_dict(config_dict()))
+    assert ret_val == expected_bool

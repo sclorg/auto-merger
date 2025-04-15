@@ -28,6 +28,7 @@ import subprocess
 import os
 import shutil
 import logging
+from subprocess import CalledProcessError
 
 from typing import Any
 from pathlib import Path
@@ -36,6 +37,7 @@ from auto_merger import utils
 from auto_merger.email import EmailSender
 from auto_merger.config import Config
 from auto_merger.pull_request_handler import PullRequestHandler
+from auto_merger.utils import cwd
 
 
 logger = logging.getLogger(__name__)
@@ -46,7 +48,7 @@ class GitHubStatusChecker:
     container_dir: Path
     current_dir = os.getcwd()
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, json_output_file: str = ""):
         self.config = config
         self.approval_labels = self.config.github["approval_labels"]
         self.blocking_labels = self.config.github["blocker_labels"]
@@ -58,6 +60,14 @@ class GitHubStatusChecker:
         self.approval_body: list = []
         self.repo_data: list = []
         self.temp_dir: Path
+        self.json_output_file = json_output_file
+
+    def check_github_status(self) -> bool:
+        if "repos" not in self.config.github:
+            return False
+        if not utils.check_json_path(json_file_path=self.json_output_file):
+            return False
+        return True
 
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
@@ -162,11 +172,14 @@ class GitHubStatusChecker:
     def clone_repo(self):
         self.temp_dir = utils.temporary_dir()
         self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
-        utils.run_command(
-            f"gh repo clone https://github.com/{self.namespace}/{self.container_name} {self.container_dir}"
-        )
-        if self.container_dir.exists():
-            os.chdir(self.container_dir)
+        try:
+            utils.run_command(
+                f"gh repo clone https://github.com/{self.namespace}/{self.container_name} {self.container_dir}"
+            )
+        except CalledProcessError as cpe:
+            logger.error(cpe.stderr)
+            return False
+        return True
 
     def merge_pull_requests(self):
         for pr in self.pr_to_merge:
@@ -184,22 +197,24 @@ class GitHubStatusChecker:
             logger.info(f"Let's check repository in {self.namespace}/{container}")
             self.container_name = container
             self.repo_data = []
-            self.clone_repo()
-            if not self.is_correct_repo():
-                logger.error(f"This is not correct repo {self.container_name}.")
-                self.clean_dirs()
+            if not self.clone_repo():
                 continue
-            if self.container_name not in self.blocked_pr:
-                self.blocked_pr[self.container_name] = []
-            if self.container_name not in self.pr_to_merge:
-                self.pr_to_merge[self.container_name] = []
-            try:
-                self.get_gh_pr_list()
-                self.check_blocked_labels()
-                self.check_pr_to_merge()
-            except subprocess.CalledProcessError:
-                logger.error(f"Something went wrong {self.container_name}.")
-                continue
+            with cwd(self.container_dir):
+                if not self.is_correct_repo():
+                    logger.error(f"This is not correct repo {self.container_name}.")
+                    self.clean_dirs()
+                    continue
+                if self.container_name not in self.blocked_pr:
+                    self.blocked_pr[self.container_name] = []
+                if self.container_name not in self.pr_to_merge:
+                    self.pr_to_merge[self.container_name] = []
+                try:
+                    self.get_gh_pr_list()
+                    self.check_blocked_labels()
+                    self.check_pr_to_merge()
+                except subprocess.CalledProcessError:
+                    logger.error(f"Something went wrong {self.container_name}.")
+                    continue
         return True
 
     def get_blocked_labels(self, pr_dict) -> list[str]:
@@ -259,6 +274,9 @@ class GitHubStatusChecker:
                 f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
             )
             self.approval_body.append("</table><br>")
+
+    def save_results(self):
+        return utils.save_json_file(json_file_path=self.json_output_file, json_dict=self.blocked_pr)
 
     def send_results(self, recipients):
         logger.debug(f"Recipients are: {recipients}")

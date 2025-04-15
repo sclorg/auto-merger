@@ -36,6 +36,7 @@ from auto_merger.email import EmailSender
 from auto_merger.config import Config
 from auto_merger.named_tuples import ProjectMR
 from auto_merger.pull_request_handler import PullRequestHandler
+from auto_merger import utils
 
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ class GitLabStatusChecker:
     container_dir: Path
     current_dir = os.getcwd()
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, json_output_file: str = ""):
         self.config = config
         self.approval_labels = self.config.gitlab["approval_labels"]
         self.blocking_labels = self.config.gitlab["blocker_labels"]
@@ -63,12 +64,23 @@ class GitLabStatusChecker:
         self.temp_dir: Path
         self._gitlab_handler = None
         self.project_id: str = ""
+        self.json_output_file = json_output_file
 
     @property
     def gitlab_handler(self):
         if not self._gitlab_handler:
             self._gitlab_handler = GitLabHandler(config=self.config)
         return self._gitlab_handler
+
+    def check_gitlab_status(self) -> bool:
+        if not self.gitlab_handler.check_authentication():
+            logger.error("GitLab authentication failed.")
+            return False
+        if "repos" not in self.config.gitlab:
+            return False
+        if not utils.check_json_path(json_file_path=self.json_output_file):
+            return False
+        return True
 
     def add_blocked_pull_request(self, merge_request=None) -> Any:
         """
@@ -137,9 +149,6 @@ class GitLabStatusChecker:
             logger.debug(f"PR to merge {pr} in repo {self.container_name}.")
 
     def check_all_containers(self) -> bool:
-        if not self.gitlab_handler.check_authentication():
-            logger.error("GitLab authentication failed.")
-            return False
         if "repos" not in self.config.gitlab:
             return False
         for container in self.config.gitlab["repos"]:
@@ -174,10 +183,10 @@ class GitLabStatusChecker:
         if not self.blocked_mr:
             return False
         logger.warning(
-            f"SUMMARY\n\nPull requests that are blocked by labels [{', '.join(self.blocking_labels)}]<br><br>"
+            f"SUMMARY\n\nGitLab merge requests that are blocked by labels [{', '.join(self.blocking_labels)}]"
         )
         self.blocked_body.append(
-            f"Pull requests that are blocked by labels <b>[{', '.join(self.blocking_labels)}]</b><br><br>"
+            f"GitLab merge requests that are blocked by labels <b>[{', '.join(self.blocking_labels)}]</b><br><br>"
         )
 
         for container, merge_requests in self.blocked_mr.items():
@@ -185,12 +194,12 @@ class GitLabStatusChecker:
                 continue
             logger.info(f"\n{container}\n------\n")
             self.blocked_body.append(f"<b>{container}<b>:")
-            self.blocked_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Missing labels</th></tr>")
+            self.blocked_body.append("<table><tr><th>Merge request URL</th><th>Title</th><th>Missing labels</th></tr>")
             for mr in merge_requests:
                 blocked_labels = self.get_blocked_labels(mr["labels"])
                 if blocked_labels == "":
                     blocked_labels = "No labels to unblock this merge request."
-                logger.info(f"{self.config.gitlab['url']}/{container}/-/merge_requests/{mr['number']} {blocked_labels}")
+                logger.info(f"{self.config.gitlab['url']}/{container}/-/merge_requests/{mr['number']} '{mr['title']}'")
                 self.blocked_body.append(
                     f"<tr><td>{self.config.gitlab['url']}/{container}/-/merge_requests/{mr['number']}</td>"
                     f"<td>{mr['title']}</td><td><p style='color:red;'>"
@@ -203,9 +212,9 @@ class GitLabStatusChecker:
         # Do not print anything in case we do not have PR.
         if not [x for x in self.pr_to_merge if self.pr_to_merge[x]]:
             return
-        logger.info("SUMMARY\n\nPull requests that can be merged approvals")
-        self.approval_body.append(f"Pull requests that can be merged or missing {self.approvals} approvals")
-        self.approval_body.append("<table><tr><th>Pull request URL</th><th>Title</th><th>Approval status</th></tr>")
+        logger.info("SUMMARY\n\nGitLab merge requests that can be merged approvals")
+        self.approval_body.append(f"GitLab merge requests that can be merged or missing {self.approvals} approvals")
+        self.approval_body.append("<table><tr><th>Merge request URL</th><th>Title</th><th>Approval status</th></tr>")
         for container, pr in self.pr_to_merge.items():
             if not pr:
                 continue
@@ -219,6 +228,9 @@ class GitLabStatusChecker:
                 f"<td>{pr['pr_dict']['title']}</td><td><p style='color:red;'>{result_pr}</p></td></tr>"
             )
         self.approval_body.append("</table><br>")
+
+    def save_results(self):
+        return utils.save_json_file(json_file_path=self.json_output_file, json_dict=self.blocked_mr)
 
     def send_results(self, recipients):
         logger.debug(f"Recipients are: {recipients}")

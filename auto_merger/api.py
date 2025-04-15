@@ -32,38 +32,46 @@ from auto_merger.merger import AutoMerger
 logger = logging.getLogger(__name__)
 
 
-def merge_request_checker(config: Config, send_email: list[str] | None) -> int:
+def merge_request_checker(config: Config, send_email: list[str] | None, json_output: str = "") -> int:
     """
     Checks NVR from brew build against pulp
     """
     logger.debug(f"Configuration: {config.__str__()}")
-
-    gl_checker = GitLabStatusChecker(config=config)
-
+    logger.debug(f"Json path: {json_output}")
+    gl_checker = GitLabStatusChecker(config=config, json_output_file=json_output)
+    if not gl_checker.check_gitlab_status():
+        return 1
     ret_value = gl_checker.check_all_containers()
     if not ret_value:
         return ret_value
     gl_checker.print_blocked_merge_requests()
     gl_checker.print_approval_pull_request()
+    if json_output:
+        gl_checker.save_results()
     if send_email:
         if not gl_checker.send_results(send_email):
             return 1
     return ret_value
 
 
-def pull_request_checker(config: Config, send_email: list[str] | None) -> int:
+def pull_request_checker(config: Config, send_email: list[str] | None, json_output: str = "") -> int:
     """
     Checks NVR from brew build against pulp
     """
     logger.debug(f"Configuration: {config.__str__()}")
-
-    gh_checker = GitHubStatusChecker(config=config)
+    logger.debug(f"Json path: {json_output}")
+    gh_checker = GitHubStatusChecker(config=config, json_output_file=json_output)
     try:
+        if not gh_checker.check_github_status():
+            return 1
+
         ret_value = gh_checker.check_all_containers()
         if not ret_value:
             return ret_value
         gh_checker.print_blocked_pull_request()
         gh_checker.print_approval_pull_request()
+        if json_output:
+            gh_checker.save_results()
         if send_email:
             if not gh_checker.send_results(send_email):
                 return 1

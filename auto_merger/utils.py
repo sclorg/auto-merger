@@ -1,6 +1,7 @@
 # MIT License
 #
 # Copyright (c) 2024 Red Hat, Inc.
+import json
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -76,7 +77,7 @@ def run_command(
 
 def temporary_dir(prefix: str = "automerger") -> str:
     temp_file = tempfile.TemporaryDirectory(prefix=prefix)
-    logger.debug(f"AutoMerger: Temporary dir name: {temp_file.name}")
+    logger.debug(f"Temporary dir name: {temp_file.name}")
     return temp_file.name
 
 
@@ -125,3 +126,32 @@ def get_realtime():
     from datetime import datetime
 
     return datetime.now()
+
+
+def return_full_path(json_file_path: str = "") -> Path:
+    return Path(os.path.abspath(json_file_path))
+
+
+def check_json_path(json_file_path: str = "") -> bool:
+    json_file_path = return_full_path(json_file_path=json_file_path)
+    if not json_file_path.parent.is_dir():
+        logger.error(f"The specified parent dir does not exist: {json_file_path.parent}.")
+        logger.error("Specify proper file path in --json-output argument.")
+        return False
+    return True
+
+
+def save_json_file(json_file_path: str = "", json_dict=None) -> bool:
+    if json_dict is None:
+        json_dict = {}
+    full_path = return_full_path(json_file_path=json_file_path)
+    logger.debug(f"Checking json file {full_path}")
+    new_dict = {}
+    for data in json_dict:
+        if not json_dict[data]:
+            continue
+        new_dict[data] = json_dict[data]
+    with open(full_path, "w") as f:
+        json.dump(new_dict, f, indent=2)
+        logger.warning(f"The auto-merge results were stored to {full_path}")
+    return True
