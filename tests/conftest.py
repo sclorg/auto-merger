@@ -73,7 +73,6 @@ def get_pr_missing_labels_one_approval():
     return json.loads((DATA_DIR / "pr_missing_labels_one_approval.json").read_text())
 
 
-@pytest.fixture()
 def get_config_dict_simple():
     return {
         "github": {
@@ -91,7 +90,6 @@ def get_config_dict_simple():
     }
 
 
-@pytest.fixture()
 def get_config_dict_miss_approval_lifetime():
     return {
         "github": {
@@ -105,7 +103,6 @@ def get_config_dict_miss_approval_lifetime():
     }
 
 
-@pytest.fixture()
 def default_config_merger():
     return {
         "github": {
@@ -124,7 +121,6 @@ def default_config_merger():
     }
 
 
-@pytest.fixture()
 def no_gitlab_repos_config():
     return {
         "github": {

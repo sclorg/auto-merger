@@ -173,6 +173,7 @@ class AutoMerger:
             try:
                 output = utils.run_command(f"gh pr merge --rebase --auto {pr['number']}", return_output=True)
                 logger.debug(f"The output from merging command '{output}'")
+                logger.info(f"Pull request {pr['number']} was merged.")
             except subprocess.CalledProcessError as cpe:
                 logger.error(f"Merging pr {pr} failed with reason {cpe.output}")
                 continue
