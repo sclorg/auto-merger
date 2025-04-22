@@ -76,7 +76,7 @@ def pull_request_checker(config: Config, send_email: list[str] | None, json_outp
             if not gh_checker.send_results(send_email):
                 return 1
     finally:
-        gh_checker.clean_dirs()
+        gh_checker.clean_temporary_dir()
 
 
 def merger(config: Config, send_email: list[str] | None) -> int:
@@ -94,4 +94,4 @@ def merger(config: Config, send_email: list[str] | None) -> int:
             if not auto_merger.send_results(send_email):
                 return 1
     finally:
-        auto_merger.clean_dirs()
+        auto_merger.clean_temporary_dir()

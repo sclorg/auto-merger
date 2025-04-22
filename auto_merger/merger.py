@@ -29,6 +29,7 @@ import subprocess
 import os
 import shutil
 
+from subprocess import CalledProcessError
 from pathlib import Path
 
 from auto_merger import utils
@@ -56,7 +57,7 @@ class AutoMerger:
         self.pr_to_merge: dict = {}
         self.approval_body: list = []
         self.repo_data: list = []
-        self.temp_dir = ""
+        self.temp_dir = utils.temporary_dir()
 
     def is_correct_repo(self) -> bool:
         cmd = ["gh repo view --json name"]
@@ -139,11 +140,15 @@ class AutoMerger:
         return True
 
     def clone_repo(self):
-        utils.run_command(
-            f"gh repo clone https://github.com/{self.namespace}/{self.container_name} "
-            f"{self.temp_dir}/{self.container_name}"
-        )
         self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
+        try:
+            utils.run_command(
+                f"gh repo clone https://github.com/{self.namespace}/{self.container_name} {self.container_dir}"
+            )
+        except CalledProcessError as cpe:
+            logger.error(cpe.stderr)
+            return False
+        return True
 
     def merge_pull_requests(self):
         for container in self.config.github["repos"]:
@@ -152,14 +157,16 @@ class AutoMerger:
             with cwd(self.container_dir) as _:
                 self.merge_pr()
         os.chdir(self.current_dir)
-        self.clean_dirs()
 
-    def clean_dirs(self):
+    def clean_temporary_dir(self):
         os.chdir(self.current_dir)
-        if self.container_dir.exists():
-            shutil.rmtree(self.container_dir)
         if Path(self.temp_dir).exists():
             shutil.rmtree(self.temp_dir)
+
+    def clean_container_dir(self):
+        os.chdir(self.current_dir)
+        if Path(self.container_dir).exists():
+            shutil.rmtree(self.container_dir)
 
     def merge_pr(self):
         for pr in self.pr_to_merge[self.container_name]:
@@ -181,16 +188,15 @@ class AutoMerger:
     def check_all_containers(self) -> bool:
         if not self.is_authenticated():
             return False
-        self.temp_dir = utils.temporary_dir()
         for container in self.config.github["repos"]:
             self.container_name = container
             self.repo_data = []
-            self.clone_repo()
-            if not self.container_dir.exists():
+            if not self.clone_repo():
                 continue
             with cwd(self.container_dir) as _:
                 if not self.is_correct_repo():
                     logger.error(f"This is not correct repo {self.container_name}.")
+                    self.clean_container_dir()
                     continue
                 if self.container_name not in self.pr_to_merge:
                     self.pr_to_merge[self.container_name] = []
