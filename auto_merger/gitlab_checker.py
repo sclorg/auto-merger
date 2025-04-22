@@ -78,8 +78,9 @@ class GitLabStatusChecker:
             return False
         if "repos" not in self.config.gitlab:
             return False
-        if not utils.check_json_path(json_file_path=self.json_output_file):
-            return False
+        if self.json_output_file is not None:
+            if not utils.check_json_path(json_file_path=self.json_output_file):
+                return False
         return True
 
     def add_blocked_pull_request(self, merge_request=None) -> Any:

@@ -28,6 +28,8 @@ import subprocess
 import os
 import shutil
 import logging
+
+
 from subprocess import CalledProcessError
 
 from typing import Any
@@ -59,14 +61,15 @@ class GitHubStatusChecker:
         self.blocked_body: list = []
         self.approval_body: list = []
         self.repo_data: list = []
-        self.temp_dir: Path
+        self.temp_dir = utils.temporary_dir()
         self.json_output_file = json_output_file
 
     def check_github_status(self) -> bool:
         if "repos" not in self.config.github:
             return False
-        if not utils.check_json_path(json_file_path=self.json_output_file):
-            return False
+        if self.json_output_file is not None:
+            if not utils.check_json_path(json_file_path=self.json_output_file):
+                return False
         return True
 
     def is_correct_repo(self) -> bool:
@@ -170,7 +173,6 @@ class GitHubStatusChecker:
         return pr_to_merge
 
     def clone_repo(self):
-        self.temp_dir = utils.temporary_dir()
         self.container_dir = Path(self.temp_dir) / f"{self.container_name}"
         try:
             utils.run_command(
@@ -185,10 +187,15 @@ class GitHubStatusChecker:
         for pr in self.pr_to_merge:
             logger.debug(f"PR to merge {pr} in repo {self.container_name}.")
 
-    def clean_dirs(self):
+    def clean_temporary_dir(self):
         os.chdir(self.current_dir)
         if Path(self.temp_dir).exists():
             shutil.rmtree(self.temp_dir)
+
+    def clean_container_dir(self):
+        os.chdir(self.current_dir)
+        if Path(self.container_dir).exists():
+            shutil.rmtree(self.container_dir)
 
     def check_all_containers(self) -> bool:
         if not self.is_authenticated():
@@ -202,7 +209,7 @@ class GitHubStatusChecker:
             with cwd(self.container_dir):
                 if not self.is_correct_repo():
                     logger.error(f"This is not correct repo {self.container_name}.")
-                    self.clean_dirs()
+                    self.clean_container_dir()
                     continue
                 if self.container_name not in self.blocked_pr:
                     self.blocked_pr[self.container_name] = []
