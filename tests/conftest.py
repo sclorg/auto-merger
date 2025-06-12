@@ -73,6 +73,30 @@ def get_pr_missing_labels_one_approval():
     return json.loads((DATA_DIR / "pr_missing_labels_one_approval.json").read_text())
 
 
+def get_pr_is_draft():
+    return {
+        "isDraft": True,
+        "labels": [
+            {"id": "LA_kwDOAe9lys8AAAABy8mG8Q", "name": "pr/missing-review", "description": "", "color": "ededed"}
+        ],
+        "number": 545,
+        "reviews": [],
+        "title": "More shared functions and test log readability",
+    }
+
+
+def get_pr_is_not_draft():
+    return {
+        "isDraft": False,
+        "labels": [
+            {"id": "LA_kwDOAe9lys8AAAABy8mG8Q", "name": "pr/missing-review", "description": "", "color": "ededed"}
+        ],
+        "number": 545,
+        "reviews": [],
+        "title": "More shared functions and test log readability",
+    }
+
+
 def get_config_dict_simple():
     return {
         "github": {

@@ -48,7 +48,7 @@ class PullRequestHandler:
     @staticmethod
     def is_draft(pull_request: dict):
         if "isDraft" in pull_request:
-            if pull_request["isDraft"] in ["True", "true"]:
+            if pull_request["isDraft"]:
                 return True
         return False
 
